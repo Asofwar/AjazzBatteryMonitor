@@ -20,30 +20,46 @@ public class ParserTests
     );
 
     [Fact]
-    public void ParseResponse_HardwareConfirmed74Percent_ReturnsCorrectValues()
+    public void ParseResponse_Valid74Percent_DoesNotInferCharging()
     {
-        // Hardware frame: 05 00 00 4A 00 01 01 02 (74% discharging)
+        // Valid battery frame; byte 4 is not an established charging flag.
         byte[] response = { 0x05, 0x00, 0x00, 0x4A, 0x00, 0x01, 0x01, 0x02 };
         var status = YichipBatteryParser.ParseResponse(_dummyDevice, response, DateTimeOffset.UtcNow);
 
         Assert.True(status.IsPresent);
         Assert.Equal(74, status.Percent);
-        Assert.False(status.IsCharging);
+        Assert.Null(status.IsCharging);
+        Assert.Null(status.IsFullyCharged);
         Assert.Equal(StatusConfidence.High, status.Confidence);
         Assert.Equal(ProviderState.Connected, status.State);
     }
 
     [Fact]
-    public void ParseResponse_HardwareConfirmed100Percent_Returns100AndCharging()
+    public void ParseResponse_100Percent_DoesNotInferChargingOrFull()
     {
-        // Hardware frame: 05 00 00 64 01 01 01 02
+        // A full percentage alone is not evidence of charging or external power.
         byte[] response = { 0x05, 0x00, 0x00, 0x64, 0x01, 0x01, 0x01, 0x02 };
         var status = YichipBatteryParser.ParseResponse(_dummyDevice, response, DateTimeOffset.UtcNow);
 
         Assert.True(status.IsPresent);
         Assert.Equal(100, status.Percent);
-        Assert.True(status.IsCharging);
-        Assert.True(status.IsFullyCharged);
+        Assert.Null(status.IsCharging);
+        Assert.Null(status.IsFullyCharged);
+    }
+
+    [Fact]
+    public void ParseResponse_SleepingOffDock_DoesNotShowCharging()
+    {
+        // Regression: 2.4 GHz mouse asleep off dock, 88% and no fresh
+        // hardware-confirmed charging telemetry. The sleep flag is independent
+        // from charging and must not cause a lightning/charging UI state.
+        byte[] response = { 0x05, 0x00, 0x00, 0x58, 0x01, 0x01, 0x01, 0x02 };
+        var status = YichipBatteryParser.ParseResponse(_dummyDevice, response, DateTimeOffset.UtcNow);
+
+        Assert.Equal(88, status.Percent);
+        Assert.True(status.IsSleeping);
+        Assert.Null(status.IsCharging);
+        Assert.Null(status.IsFullyCharged);
     }
 
     [Fact]

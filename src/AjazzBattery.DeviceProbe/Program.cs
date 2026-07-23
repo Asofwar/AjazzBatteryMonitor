@@ -44,6 +44,9 @@ internal static class Program
                 }
                 return await CommandCaptureAsync(transport, hidProvider, durationSec);
 
+            case "capture-power-states":
+                return await CommandCapturePowerStatesAsync(transport, hidProvider, args);
+
             case "export":
                 return await CommandExportAsync(transport, registry);
 
@@ -283,7 +286,7 @@ internal static class Program
             {
                 if (col.UsagePage == 0x0001 && col.Usage == 0x0002) continue;
                 var status = await provider.ReadStatusAsync(col, CancellationToken.None);
-                samples.Add(new { Timestamp = DateTime.UtcNow, col.DevicePath, status.Percent, status.IsCharging, status.IsSleeping, status.RawFrameHex });
+                samples.Add(new { Timestamp = DateTime.UtcNow, status.Percent, status.IsCharging, status.IsSleeping, status.RawFrameHex });
             }
             await Task.Delay(2000);
         }
@@ -292,6 +295,38 @@ internal static class Program
         string path = "capture-dump.json";
         File.WriteAllText(path, dumpJson);
         Console.WriteLine($"[+] Дамп сохранен в {Path.GetFullPath(path)} (записей: {samples.Count})");
+        return 0;
+    }
+
+    private static async Task<int> CommandCapturePowerStatesAsync(IHidTransport transport, IMouseBatteryProvider provider, string[] args)
+    {
+        int stateIndex = Array.IndexOf(args, "--state");
+        if (stateIndex < 0 || stateIndex + 1 >= args.Length) return 2;
+
+        string physicalState = args[stateIndex + 1];
+        var samples = new List<object>();
+        for (int reading = 0; reading < 5; reading++)
+        {
+            var collection = (await transport.EnumerateAllHidCollectionsAsync(CancellationToken.None)).FirstOrDefault(provider.CanHandle);
+            if (collection is null) return 1;
+            var status = await provider.ReadStatusAsync(collection, CancellationToken.None);
+            samples.Add(new
+            {
+                TimestampUtc = DateTimeOffset.UtcNow,
+                PhysicalState = physicalState,
+                Transport = "HID 2.4G",
+                FrameLength = status.RawFrameHex?.Length,
+                ReportId = status.RawFrameHex?.FirstOrDefault(),
+                RawFrame = status.RawFrameHex is null ? null : BitConverter.ToString(status.RawFrameHex),
+                status.Percent,
+                status.IsCharging,
+                status.IsSleeping,
+                status.Confidence,
+                status.State
+            });
+            if (reading < 4) await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+        File.WriteAllText($"power-state-{physicalState}.json", JsonSerializer.Serialize(samples, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
 

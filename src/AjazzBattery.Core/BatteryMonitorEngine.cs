@@ -114,8 +114,10 @@ public sealed class BatteryMonitorEngine
             var fallbackStatus = new BatteryStatus(
                 IsPresent: true,
                 Percent: isStale ? null : _lastStatus.Percent,
-                IsCharging: _lastStatus.IsCharging,
-                IsFullyCharged: _lastStatus.IsFullyCharged,
+                // A telemetry gap must not carry a charging claim across a
+                // sleep, device-session or transport transition.
+                IsCharging: null,
+                IsFullyCharged: null,
                 IsSleeping: _lastStatus.IsSleeping,
                 ConnectionMode: sortedCollections[0].ConnectionMode,
                 Timestamp: DateTimeOffset.UtcNow,

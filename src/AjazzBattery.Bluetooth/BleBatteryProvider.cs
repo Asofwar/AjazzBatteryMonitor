@@ -109,7 +109,7 @@ public sealed class BleBatteryProvider : IMouseBatteryProvider
                 IsPresent: true,
                 Percent: percent,
                 IsCharging: null,
-                IsFullyCharged: percent == 100,
+                IsFullyCharged: null,
                 IsSleeping: false,
                 ConnectionMode: ConnectionMode.BluetoothLe,
                 Timestamp: DateTimeOffset.UtcNow,

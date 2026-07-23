@@ -85,8 +85,13 @@ public static class YichipBatteryParser
         }
 
         int percent = rawPercent;
-        bool isCharging = (rawResponse.Length > 4 && (rawResponse[4] & 0x01) != 0) || percent == 100;
-        bool isFullyCharged = percent == 100;
+        // The status-flag layout has not been validated on an AJ179 APEX in
+        // every power state. In particular, byte 4 bit 0 is not proof of
+        // charging and a 100% battery level is not proof of external power.
+        // Keep both values unknown until a repeated hardware capture defines a
+        // protocol-confirmed charging signal.
+        bool? isCharging = null;
+        bool? isFullyCharged = null;
         bool isSleeping = rawResponse.Length > 7 && (rawResponse[7] & 0x02) != 0;
 
         string frameHex = BitConverter.ToString(rawResponse, 0, Math.Min(8, rawResponse.Length)).Replace("-", " ");
