@@ -15,6 +15,8 @@ files contain no MAC address, serial number, HID path, or device identifier.
 Until each state has at least five sequential captures, 2.4 GHz charging is
 not protocol-confirmed. Production code therefore keeps `IsCharging` and
 `IsFullyCharged` null rather than inferring either from status bits or percent.
+This is a supported fail-safe release mode; the missing matrix only blocks
+enabling HID charging detection, not a release that keeps it unsupported.
 
 ## Recorded observation
 

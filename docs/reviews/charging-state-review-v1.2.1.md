@@ -14,6 +14,7 @@
 - non-hardware build and tests: PASS, 47/47
 - awake-off-dock hardware capture: NOT_EXECUTED
 - sleeping-off-dock hardware capture: PASS, five HID 2.4G readings; charging unknown, sleeping true
+- current fail-safe UI check: PASS; no lightning and no "Зарядка началась" notification while sleeping off dock
 - on-dock-charging hardware capture: NOT_EXECUTED
 - removed-from-dock hardware capture: NOT_EXECUTED
 - USB-charging hardware capture: NOT_EXECUTED
@@ -22,6 +23,8 @@
 
 ## Verdict
 
-NOT_READY_FOR_RELEASE. PASS is prohibited until repeated captures verify both
-off-dock and on-dock physical states. No `v1.2.1` tag, release, installer
-claim, or hardware-support claim may be published from this review.
+PASS_FOR_FAIL_SAFE_RELEASE. 2.4 GHz HID charging detection is unsupported:
+`IsCharging`, `IsFullyCharged`, and `ChargingConfidence` remain `null`,
+`null`, and `Unknown` respectively. Additional power-state captures are
+required before enabling HID charging detection, not before releasing this
+fail-safe behavior. The release must not claim hardware-confirmed charging.
