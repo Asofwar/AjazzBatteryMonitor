@@ -53,7 +53,7 @@ public sealed class BatteryGaugeControl : UserControl
 
         // 2. Calculate Fill Angle & Color
         int percent = _status.Percent ?? 0;
-        bool isCharging = _status.IsCharging == true;
+        bool isCharging = _status.IsChargingConfirmed;
         bool isSleeping = _status.IsSleeping;
         bool isPresent = _status.IsPresent;
 

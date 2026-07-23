@@ -6,7 +6,7 @@ namespace AjazzBattery.Core.Tests;
 
 public class NotificationEngineTests
 {
-    private static BatteryStatus CreateStatus(int? percent, bool isCharging = false, bool isSleeping = false, StatusConfidence conf = StatusConfidence.High)
+    private static BatteryStatus CreateStatus(int? percent, bool isCharging = false, bool isSleeping = false, StatusConfidence conf = StatusConfidence.High, ChargingConfidence chargingConfidence = ChargingConfidence.HardwareValidated)
     {
         return new BatteryStatus(
             IsPresent: true,
@@ -19,7 +19,8 @@ public class NotificationEngineTests
             Confidence: conf,
             DiagnosticMessage: "Test Status",
             State: percent.HasValue ? ProviderState.Connected : ProviderState.TelemetryNotReady,
-            ActiveTransport: "BLE"
+            ActiveTransport: "BLE",
+            ChargingConfidence: chargingConfidence
         );
     }
 
@@ -172,6 +173,33 @@ public class NotificationEngineTests
 
         Assert.Single(primary.SentNotifications);
         Assert.Equal("charging_started", primary.SentNotifications[0].Category);
+    }
+
+    [Fact]
+    public async Task EstimatedCharging_DoesNotSendChargingNotificationOrSuppressLowBattery()
+    {
+        var primary = new FakeNotificationTransport();
+        var fallback = new FakeNotificationTransport();
+        var service = new BatteryNotificationService(primary, fallback);
+
+        await service.ProcessBatteryUpdateAsync(CreateStatus(5, isCharging: true, chargingConfidence: ChargingConfidence.Estimated));
+
+        Assert.Single(primary.SentNotifications);
+        Assert.Equal("threshold_5", primary.SentNotifications[0].Category);
+        Assert.Null(service.State.WasCharging);
+    }
+
+    [Fact]
+    public async Task SleepingStatus_ClearsPreviousConfirmedChargingState()
+    {
+        var primary = new FakeNotificationTransport();
+        var fallback = new FakeNotificationTransport();
+        var service = new BatteryNotificationService(primary, fallback);
+
+        await service.ProcessBatteryUpdateAsync(CreateStatus(40, isCharging: true));
+        await service.ProcessBatteryUpdateAsync(CreateStatus(40, isCharging: true, isSleeping: true));
+
+        Assert.Null(service.State.WasCharging);
     }
 
     [Fact]

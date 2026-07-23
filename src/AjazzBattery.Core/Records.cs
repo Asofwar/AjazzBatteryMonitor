@@ -31,9 +31,13 @@ public sealed record BatteryStatus(
     string? DiagnosticMessage,
     ProviderState State = ProviderState.DeviceNotFound,
     string ActiveTransport = "None",
-    byte[]? RawFrameHex = null
+    byte[]? RawFrameHex = null,
+    ChargingConfidence ChargingConfidence = ChargingConfidence.Unknown
 )
 {
+    public bool IsChargingConfirmed =>
+        IsCharging == true && ChargingConfidence >= global::AjazzBattery.Core.ChargingConfidence.ProtocolConfirmed;
+
     public static BatteryStatus CreateUnknown(string? diagnosticMessage = null, ProviderState state = ProviderState.DeviceNotFound) =>
         new(
             IsPresent: false,

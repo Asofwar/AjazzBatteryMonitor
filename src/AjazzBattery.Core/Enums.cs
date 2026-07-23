@@ -18,6 +18,14 @@ public enum StatusConfidence
     Unknown = 4
 }
 
+public enum ChargingConfidence
+{
+    Unknown = 0,
+    Estimated = 1,
+    ProtocolConfirmed = 2,
+    HardwareValidated = 3
+}
+
 public enum ConfirmationStatus
 {
     ConfirmedOnDevice = 0,

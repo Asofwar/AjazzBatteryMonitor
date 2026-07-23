@@ -156,7 +156,7 @@ public sealed class BatteryMonitorEngine
             return TimeSpan.FromSeconds(60);
         }
 
-        if (_lastStatus.IsCharging == true)
+        if (_lastStatus.IsChargingConfirmed)
         {
             return TimeSpan.FromSeconds(15);
         }
@@ -208,6 +208,12 @@ public sealed class BatteryMonitorEngine
                 _notifiedLow10 = false;
                 _notifiedLow20 = false;
             }
+        }
+
+        if (!status.IsCharging.HasValue || status.ChargingConfidence < ChargingConfidence.ProtocolConfirmed)
+        {
+            _wasCharging = null;
+            return;
         }
 
         if (status.IsCharging.HasValue)

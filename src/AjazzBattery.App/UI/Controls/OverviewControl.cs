@@ -169,7 +169,7 @@ public sealed class OverviewControl : UserControl
         {
             stVal = "Отключена";
         }
-        else if (status.IsCharging == true)
+        else if (status.IsChargingConfirmed)
         {
             stVal = "Заряжается ⚡";
         }
@@ -187,7 +187,7 @@ public sealed class OverviewControl : UserControl
 
         _cardStatus.CardValue = stVal;
         _cardStatus.CardSubText = isPresent ? "Опрос без ошибок" : "Ожидание устройства";
-        _cardStatus.ValueColor = ThemeManager.GetBatteryLevelColor(status.Percent, status.IsCharging == true, status.IsSleeping);
+        _cardStatus.ValueColor = ThemeManager.GetBatteryLevelColor(status.Percent, status.IsChargingConfirmed, status.IsSleeping);
 
         var localTime = SystemClock.Instance.ToLocal(status.Timestamp);
         _cardUpdated.CardValue = isPresent ? localTime.ToString("HH:mm:ss") : "—";

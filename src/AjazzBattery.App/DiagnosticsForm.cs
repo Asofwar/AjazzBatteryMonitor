@@ -98,7 +98,8 @@ public sealed class DiagnosticsForm : Form
         sb.AppendLine($"Активный транспорт: {status.ActiveTransport}");
         sb.AppendLine($"Состояние:          {status.State}");
         sb.AppendLine($"Процент заряда:     {(status.Percent.HasValue ? $"{status.Percent}%" : "Неизвестен")}");
-        sb.AppendLine($"Зарядка:            {(status.IsCharging == true ? "Да" : "Нет")}");
+        sb.AppendLine($"Зарядка:            {status.IsCharging switch { true => "Да", false => "Нет", null => "Неизвестно" }}");
+        sb.AppendLine($"Достоверность зарядки: {status.ChargingConfidence}");
         sb.AppendLine($"Режим сна:          {(status.IsSleeping ? "Да" : "Нет")}");
         sb.AppendLine($"Достоверность:      {status.Confidence}");
         sb.AppendLine($"Диагностика:        {Logger.RedactSensitiveData(status.DiagnosticMessage ?? string.Empty)}");

@@ -187,7 +187,7 @@ public sealed class TrayApplicationContext : ApplicationContext
             UpdateTrayIconInternal(status);
 
             string pctStr = status.Percent.HasValue ? $"{status.Percent}%" : "заряд неизвестен";
-            string stateStr = status.IsCharging == true ? "заряжается ⚡" : (status.IsSleeping ? "в режиме сна" : (status.IsPresent ? "подключена" : "отключена"));
+            string stateStr = status.IsChargingConfirmed ? "заряжается ⚡" : (status.IsSleeping ? "в режиме сна" : (status.IsPresent ? "подключена" : "отключена"));
             var localTime = SystemClock.Instance.ToLocal(status.Timestamp);
             _notifyIcon.Text = $"AJAZZ AJ179 APEX\nЗаряд: {pctStr}\nСостояние: {stateStr}\nОбновлено: {localTime:HH:mm:ss}";
 
