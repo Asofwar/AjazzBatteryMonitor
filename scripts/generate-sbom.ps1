@@ -15,5 +15,5 @@ if (-not (Test-Path $tool)) {
     if ($LASTEXITCODE -ne 0) { throw "CycloneDX installation failed with exit code $LASTEXITCODE." }
 }
 
-& $tool "$repoRoot\AjazzBattery.sln" --output $artifacts --filename 'AjazzBatteryMonitor-v1.2.0.sbom.json' --output-format Json --runtime win-x64 --configuration Release --exclude-test-projects --disable-package-restore --set-name 'AJAZZ Battery Monitor' --set-version '1.2.0'
+& $tool "$repoRoot\AjazzBattery.sln" --output $artifacts --filename 'AjazzBatteryMonitor-v1.2.1.sbom.json' --output-format Json --runtime win-x64 --configuration Release --exclude-test-projects --disable-package-restore --set-name 'AJAZZ Battery Monitor' --set-version '1.2.1'
 if ($LASTEXITCODE -ne 0) { throw "SBOM generation failed with exit code $LASTEXITCODE." }

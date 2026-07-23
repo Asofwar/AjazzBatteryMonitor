@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses semantic versioning.
 
+## [1.2.1] - 2026-07-24
+
+### Fixed
+
+- stopped inferring charging or full-charge status from unvalidated HID flags and battery percentage
+- cleared charging state on telemetry gaps and restricted status probes to the AJAZZ HID allowlist
+- treated BLE Battery Level as percentage-only telemetry
+
+### Changed
+
+- added anonymized five-sample power-state captures and a documented hardware-validation matrix
+- display unknown charging state explicitly in history, diagnostics and the DeviceProbe CLI
+
+### Known limitations
+
+- physical AJ179 APEX power-state validation is still required before publishing a v1.2.1 release
+
 ## [1.2.0] - 2026-07-24
 
 ### Added

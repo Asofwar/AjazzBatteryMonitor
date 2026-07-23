@@ -35,7 +35,8 @@ public static class YichipBatteryParser
                 DiagnosticMessage: "2.4 GHz телеметрия ещё не готова (нулевой кадр)",
                 State: ProviderState.TelemetryNotReady,
                 ActiveTransport: "HID 2.4G",
-                RawFrameHex: rawResponse
+                RawFrameHex: rawResponse,
+                ConnectionStateTimestamp: timestamp
             );
         }
 
@@ -61,7 +62,8 @@ public static class YichipBatteryParser
                 DiagnosticMessage: $"Отклонен невалидный кадр [0]=0x{reportId:X2} [1]=0x{header1:X2} [2]=0x{header2:X2}",
                 State: ProviderState.InvalidFrame,
                 ActiveTransport: "HID 2.4G",
-                RawFrameHex: rawResponse
+                RawFrameHex: rawResponse,
+                ConnectionStateTimestamp: timestamp
             );
         }
 
@@ -80,13 +82,19 @@ public static class YichipBatteryParser
                 DiagnosticMessage: $"Значение батареи вне диапазона 0..100: {rawPercent}",
                 State: ProviderState.InvalidFrame,
                 ActiveTransport: "HID 2.4G",
-                RawFrameHex: rawResponse
+                RawFrameHex: rawResponse,
+                ConnectionStateTimestamp: timestamp
             );
         }
 
         int percent = rawPercent;
-        bool isCharging = (rawResponse.Length > 4 && (rawResponse[4] & 0x01) != 0) || percent == 100;
-        bool isFullyCharged = percent == 100;
+        // The status-flag layout has not been validated on an AJ179 APEX in
+        // every power state. In particular, byte 4 bit 0 is not proof of
+        // charging and a 100% battery level is not proof of external power.
+        // Keep both values unknown until a repeated hardware capture defines a
+        // protocol-confirmed charging signal.
+        bool? isCharging = null;
+        bool? isFullyCharged = null;
         bool isSleeping = rawResponse.Length > 7 && (rawResponse[7] & 0x02) != 0;
 
         string frameHex = BitConverter.ToString(rawResponse, 0, Math.Min(8, rawResponse.Length)).Replace("-", " ");
@@ -104,7 +112,9 @@ public static class YichipBatteryParser
             DiagnosticMessage: diagMsg,
             State: ProviderState.Connected,
             ActiveTransport: $"HID 2.4G (0x{device.VendorId:X4}:0x{device.ProductId:X4})",
-            RawFrameHex: rawResponse
+            RawFrameHex: rawResponse,
+            BatteryTimestamp: timestamp,
+            ConnectionStateTimestamp: timestamp
         );
     }
 }

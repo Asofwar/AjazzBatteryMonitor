@@ -4,7 +4,7 @@ AJAZZ Battery Monitor is a Windows 10/11 x64 tray application for monitoring the
 
 ## Status
 
-The target version is `1.2.0`. Version metadata is centralized in `Directory.Build.props`.
+The target version is `1.2.1`. Version metadata is centralized in `Directory.Build.props`.
 
 Hardware support is intentionally conservative: a successful real-device read is required before claiming that a transport is supported. CI runs non-hardware tests only; it cannot validate a physical mouse.
 
@@ -43,4 +43,4 @@ Release binaries are unsigned unless a release workflow receives the configured 
 
 ## License
 
-Licensed under [GPL-3.0-or-later](LICENSE). The protocol provenance audit is retained for traceability; it does not claim clean-room implementation or remove the GPL obligations.
+Licensed under [GPL-3.0-or-later](LICENSE), a dependency-compatible copyleft license. This is an independent implementation with documented protocol provenance; the audit is retained for traceability and does not remove the GPL obligations.

@@ -98,7 +98,15 @@ public sealed class DiagnosticsForm : Form
         sb.AppendLine($"Активный транспорт: {status.ActiveTransport}");
         sb.AppendLine($"Состояние:          {status.State}");
         sb.AppendLine($"Процент заряда:     {(status.Percent.HasValue ? $"{status.Percent}%" : "Неизвестен")}");
-        sb.AppendLine($"Зарядка:            {(status.IsCharging == true ? "Да" : "Нет")}");
+        sb.AppendLine($"Зарядка:            {status.IsCharging switch { true => "Да", false => "Нет", null => "Неизвестно" }}");
+        sb.AppendLine($"Достоверность зарядки: {status.ChargingConfidence}");
+        sb.AppendLine($"Источник зарядки:    {(status.IsChargingConfirmed ? status.ActiveTransport : "недоступен")}");
+        sb.AppendLine($"Raw flag / mask:     не подтверждены");
+        sb.AppendLine($"Время батареи:       {status.BatteryTimestamp?.ToString("O") ?? "нет данных"}");
+        sb.AppendLine($"Время зарядки:       {status.ChargingStateTimestamp?.ToString("O") ?? "нет данных"}");
+        sb.AppendLine($"Возраст зарядки:     {(status.ChargingStateTimestamp is { } chargingAt ? (DateTimeOffset.UtcNow - chargingAt).ToString() : "нет данных")}");
+        sb.AppendLine($"Debounce зарядки:    {status.ChargingDebounceCount}");
+        sb.AppendLine($"Профиль валидации:   не назначен");
         sb.AppendLine($"Режим сна:          {(status.IsSleeping ? "Да" : "Нет")}");
         sb.AppendLine($"Достоверность:      {status.Confidence}");
         sb.AppendLine($"Диагностика:        {Logger.RedactSensitiveData(status.DiagnosticMessage ?? string.Empty)}");

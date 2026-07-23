@@ -16,7 +16,7 @@ public static class TrayIconRenderer
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
             int percent = status.Percent ?? 0;
-            bool isCharging = status.IsCharging == true;
+            bool isCharging = status.IsChargingConfirmed;
             bool isSleeping = status.IsSleeping;
             bool isPresent = status.IsPresent;
 

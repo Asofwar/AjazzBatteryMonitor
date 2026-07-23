@@ -166,7 +166,7 @@ public sealed class DetailsForm : Form
         }
 
         _lblPercent.Text = status.Percent.HasValue ? $"{status.Percent}%" : "Заряд неизвестен";
-        _lblStatus.Text = status.IsCharging == true ? "Заряжается" : (status.IsSleeping ? "Режим сна" : (status.IsPresent ? "Подключена" : "Отключена"));
+        _lblStatus.Text = status.IsChargingConfirmed ? "Заряжается" : (status.IsSleeping ? "Режим сна" : (status.IsPresent ? "Подключена" : "Отключена"));
         _lblUpdated.Text = status.Timestamp.ToString("HH:mm:ss");
         _lblDiag.Text = status.DiagnosticMessage ?? "Опрос выполняется без ошибок.";
 
@@ -177,7 +177,7 @@ public sealed class DetailsForm : Form
         {
             var item = new ListViewItem(entry.Timestamp.ToString("HH:mm:ss"));
             item.SubItems.Add(entry.Percent.HasValue ? $"{entry.Percent}%" : "?");
-            item.SubItems.Add(entry.IsCharging == true ? "Да" : "Нет");
+            item.SubItems.Add(entry.IsCharging switch { true => "Да", false => "Нет", null => "Нет данных" });
             item.SubItems.Add(entry.ConnectionMode);
             _historyListView.Items.Add(item);
         }

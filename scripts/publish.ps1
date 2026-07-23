@@ -16,7 +16,7 @@ if (-not (Test-Path $ArtifactsDir)) {
 Write-Output "Cleaning old artifacts..."
 Get-ChildItem -Path $ArtifactsDir -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-Write-Output "Publishing AjazzBattery.App v1.2.0 as a single-file executable..."
+Write-Output "Publishing AjazzBattery.App v1.2.1 as a single-file executable..."
 & $dotnet restore "$RepoRoot\AjazzBattery.sln" --locked-mode --runtime win-x64
 if ($LASTEXITCODE -ne 0) { throw "Locked restore failed with exit code $LASTEXITCODE." }
 & $dotnet publish "$RepoRoot\src\AjazzBattery.App\AjazzBattery.App.csproj" `
@@ -33,7 +33,7 @@ if ($LASTEXITCODE -ne 0) { throw "Publish failed with exit code $LASTEXITCODE." 
 
 $PublishedExe = Get-ChildItem -Path "$ArtifactsDir\publish_temp" -Filter "*.exe" | Select-Object -First 1
 if ($PublishedExe) {
-    $releaseExe = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.2.0.exe"
+    $releaseExe = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.2.1.exe"
     $copied = $false
     for ($attempt = 1; $attempt -le 5 -and -not $copied; $attempt++) {
         try {

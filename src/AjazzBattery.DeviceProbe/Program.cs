@@ -8,6 +8,16 @@ namespace AjazzBattery.DeviceProbe;
 
 internal static class Program
 {
+    private static readonly HashSet<string> PowerCaptureStates = new(StringComparer.Ordinal)
+    {
+        "state-awake-off-dock",
+        "state-sleeping-off-dock",
+        "state-on-dock-charging",
+        "state-removed-from-dock",
+        "state-usb-charging",
+        "state-fully-charged"
+    };
+
     private static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -44,6 +54,9 @@ internal static class Program
                 }
                 return await CommandCaptureAsync(transport, hidProvider, durationSec);
 
+            case "capture-power-states":
+                return await CommandCapturePowerStatesAsync(transport, hidProvider, args);
+
             case "export":
                 return await CommandExportAsync(transport, registry);
 
@@ -65,6 +78,7 @@ internal static class Program
         Console.WriteLine("  read-battery      - Разовое чтение процента через BLE/HID");
         Console.WriteLine("  monitor           - Отслеживание изменений статуса в реальном времени");
         Console.WriteLine("  capture [--duration 60] - Запись дампа пакетов за период (сек)");
+        Console.WriteLine("  capture-power-states --state <name> - Пять обезличенных HID-чтений для ручного состояния");
         Console.WriteLine("  export            - Экспорт обезличенной диагностики в JSON");
         Console.WriteLine();
     }
@@ -134,9 +148,9 @@ internal static class Program
             Console.WriteLine($"  Usage:     0x{col.Usage:X4}");
             Console.WriteLine($"  FeatureLen:{col.FeatureReportByteLength}");
 
-            if (col.UsagePage == 0x0001 && col.Usage == 0x0002)
+            if (!hidProvider.CanHandle(col))
             {
-                Console.WriteLine("  Result:    Skipped — standard mouse input collection (0x0001/0x0002)");
+                Console.WriteLine("  Result:    Skipped — collection is not in the AJAZZ allowlist");
                 continue;
             }
 
@@ -164,7 +178,7 @@ internal static class Program
                 if (status.Percent.HasValue)
                 {
                     Console.WriteLine($"  Result:    SUCCESS! Real Battery Percentage: {status.Percent}%");
-                    Console.WriteLine($"             Status: {(status.IsCharging == true ? "Charging" : "Discharging")} | Sleeping: {status.IsSleeping}");
+                    Console.WriteLine($"             Status: {status.IsCharging switch { true => "Charging", false => "Discharging", null => "Unknown" }} | Sleeping: {status.IsSleeping}");
                 }
                 else
                 {
@@ -210,7 +224,7 @@ internal static class Program
         var collections = await transport.EnumerateAllHidCollectionsAsync(CancellationToken.None);
         foreach (var col in collections)
         {
-            if (col.UsagePage == 0x0001 && col.Usage == 0x0002) continue;
+            if (!hidProvider.CanHandle(col)) continue;
 
             var status = await hidProvider.ReadStatusAsync(col, CancellationToken.None);
             if (status.IsPresent && status.Percent.HasValue)
@@ -228,7 +242,8 @@ internal static class Program
     {
         Console.WriteLine($"  Активный транспорт: {transportName}");
         Console.WriteLine($"  Процент батареи:    {(status.Percent.HasValue ? $"{status.Percent}%" : "Заряд неизвестен")}");
-        Console.WriteLine($"  Зарядка:            {(status.IsCharging == true ? "Да" : "Нет")}");
+        Console.WriteLine($"  Зарядка:            {status.IsCharging switch { true => "Да", false => "Нет", null => "Неизвестно" }}");
+        Console.WriteLine($"  Достоверность:      {status.ChargingConfidence}");
         Console.WriteLine($"  Режим сна:          {(status.IsSleeping ? "Да" : "Нет")}");
         Console.WriteLine($"  Состояние:          {status.State}");
         Console.WriteLine($"  Диагностика:        {status.DiagnosticMessage}");
@@ -250,7 +265,7 @@ internal static class Program
 
             foreach (var col in collections)
             {
-                if (col.UsagePage == 0x0001 && col.Usage == 0x0002) continue;
+                if (!hidProvider.CanHandle(col)) continue;
                 var status = await hidProvider.ReadStatusAsync(col, cts.Token);
                 if (status.IsPresent && status.Percent.HasValue)
                 {
@@ -281,9 +296,9 @@ internal static class Program
             var collections = await transport.EnumerateAllHidCollectionsAsync(CancellationToken.None);
             foreach (var col in collections)
             {
-                if (col.UsagePage == 0x0001 && col.Usage == 0x0002) continue;
+                if (!provider.CanHandle(col)) continue;
                 var status = await provider.ReadStatusAsync(col, CancellationToken.None);
-                samples.Add(new { Timestamp = DateTime.UtcNow, col.DevicePath, status.Percent, status.IsCharging, status.IsSleeping, status.RawFrameHex });
+                samples.Add(new { Timestamp = DateTime.UtcNow, status.Percent, status.IsCharging, status.IsSleeping, status.RawFrameHex });
             }
             await Task.Delay(2000);
         }
@@ -292,6 +307,44 @@ internal static class Program
         string path = "capture-dump.json";
         File.WriteAllText(path, dumpJson);
         Console.WriteLine($"[+] Дамп сохранен в {Path.GetFullPath(path)} (записей: {samples.Count})");
+        return 0;
+    }
+
+    private static async Task<int> CommandCapturePowerStatesAsync(IHidTransport transport, IMouseBatteryProvider provider, string[] args)
+    {
+        int stateIndex = Array.IndexOf(args, "--state");
+        if (stateIndex < 0 || stateIndex + 1 >= args.Length) return 2;
+
+        string physicalState = args[stateIndex + 1];
+        if (!PowerCaptureStates.Contains(physicalState)) return 2;
+        var samples = new List<object>();
+        for (int reading = 0; reading < 5; reading++)
+        {
+            var collection = (await transport.EnumerateAllHidCollectionsAsync(CancellationToken.None)).FirstOrDefault(provider.CanHandle);
+            if (collection is null) return 1;
+            var status = await provider.ReadStatusAsync(collection, CancellationToken.None);
+            samples.Add(new
+            {
+                TimestampUtc = DateTimeOffset.UtcNow,
+                PhysicalState = physicalState,
+                Transport = "HID 2.4G",
+                FrameLength = status.RawFrameHex?.Length,
+                ReportId = status.RawFrameHex?.FirstOrDefault(),
+                RawFrame = status.RawFrameHex is null ? null : BitConverter.ToString(status.RawFrameHex),
+                status.Percent,
+                status.IsCharging,
+                status.IsSleeping,
+                status.Confidence,
+                status.ChargingConfidence,
+                status.BatteryTimestamp,
+                status.ChargingStateTimestamp,
+                status.ConnectionStateTimestamp,
+                status.ChargingDebounceCount,
+                status.State
+            });
+            if (reading < 4) await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+        File.WriteAllText($"power-state-{physicalState}.json", JsonSerializer.Serialize(samples, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
     }
 

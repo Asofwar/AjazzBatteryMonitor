@@ -1,37 +1,27 @@
-# AJAZZ AJ179 APEX HID Protocol Specification
+# AJ179 APEX protocol status
 
-## Device Identification Matrix
+## Evidence levels
 
-| Connection Mode | Vendor ID | Product ID | Usage Page | Usage | Interface |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **2.4 GHz Dongle** | `0x3151` | `0x402D` | `0xFF00` / `0xFF01` | `0x0001` | Vendor-defined HID interface |
-| **Dock Station** | `0x3151` | `0x5007` | `0xFF00` / `0xFF01` | `0x0001` | Charging Dock Receiver HID |
-| **USB Cable** | `0x3151` | `0x502D` | `0xFF00` / `0xFF01` | `0x0001` | Direct Wired USB Interface |
-| **Alternate 2.4G** | `0x3151` | `0x5008` | `0xFF00` / `0xFF01` | `0x0001` | AJ179 Variant Receiver |
-| **Bluetooth LE** | Standard GATT | `0x180F` | `0x2A19` (Char) | N/A | BLE Battery Service |
+| Field | Source-code behavior | Repeated hardware observation | Current status |
+|---|---|---|---|
+| Battery percent | parsed from a valid HID status frame; BLE `0x2A19` is percentage-only | not yet captured for this release | source-code behavior only |
+| Sleep flag | parser reads byte 7, mask `0x02`, after the minimum-frame validation | not yet captured for this release | hypothesis, not a charging signal |
+| Charging flag | no HID byte or mask is used in production | none | unknown; `IsCharging = null` |
+| Dock presence | no dock bit is used as charging evidence | none | unknown |
+| Full-charge flag | neither 100% nor a HID bit is used | none | unknown; `IsFullyCharged = null` |
+| Other bytes | retained only in anonymized diagnostics | none | unknown |
 
-## Query Command Specification (Feature Report)
+## Frame validation
 
-### 2.4GHz / USB Query Packet (65 Bytes Total: 1 Byte Report ID + 64 Bytes Data)
-- **Report ID**: `0x00` (or `0x08` on specific firmware variants)
-- **Feature Report Buffer**:
-  - `[0]` = `0x00` (Report ID)
-  - `[1]` = `0x20` (Query Opcode / Battery Request)
-  - `[2]` = `0x01` (Sub-opcode)
-  - `[3..64]` = `0x00` (Zero padding)
+The HID parser requires expected report/header values, a minimum eight-byte
+response, and a percentage in range before it reads status bytes. A short or
+invalid frame returns `ProviderState.InvalidFrame`; it does not infer charging
+or read missing bytes.
 
-### Response Packet Layout (64 / 65 Bytes)
-- **Byte 4 (`resp[4]`)**: Battery percentage integer (`0` to `100` decimal).
-  - `0xFF` (255) indicates fully charged / connected to external power.
-  - `0x00` (0) when invalid indicates read error or mouse entering sleep state.
-- **Byte 3 / 5 (`resp[3]`, `resp[5]`)**:
-  - Bit 0: Charging status (`1` = Charging, `0` = Discharging)
-  - Bit 1: Sleep status (`1` = Sleep / Deep Sleep)
+## Charging rule
 
-## Forbidden Commands
-The following HID opcodes are strictly prohibited from being sent to avoid risking hardware bricking or EEPROM corruption:
-- Firmware Flashing / Bootloader Opcodes (`0xA1`, `0xFF`)
-- Memory Write Commands
-- Polling Rate / DPI Modification Opcodes
-- RGB Profile Writes
-- Macro Writes
+Charging over 2.4 GHz is not currently supported as a confirmed state. Only a
+future repeated physical observation may promote a documented bit to
+`ProtocolConfirmed` or `HardwareValidated`. Until then `IsCharging` and
+`IsFullyCharged` remain `null`, and production UI, tray, and notifications do
+not show charging.

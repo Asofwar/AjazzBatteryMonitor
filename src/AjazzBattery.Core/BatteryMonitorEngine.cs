@@ -14,6 +14,11 @@ public sealed class BatteryMonitorEngine
     private bool _notifiedLow10 = false;
     private bool _notifiedLow5 = false;
     private bool? _wasCharging = null;
+    private bool? _acceptedChargingState = null;
+    private bool? _pendingChargingState = null;
+    private int _pendingChargingCount = 0;
+    private string _chargingTransport = "None";
+    private DateTimeOffset? _acceptedChargingStateAt = null;
 
     public BatteryStatus CurrentStatus => _lastStatus;
 
@@ -51,6 +56,7 @@ public sealed class BatteryMonitorEngine
                 var bleStatus = await bleProvider.ReadStatusAsync(bleDummyDescriptor, cancellationToken);
                 if (bleStatus.IsPresent && bleStatus.Percent.HasValue)
                 {
+                    bleStatus = ApplyChargingDebounce(bleStatus);
                     _consecutiveErrors = 0;
                     _lastSuccessfulRead = bleStatus.Timestamp;
                     ProcessNotifications(bleStatus, "AJAZZ AJ179 APEX");
@@ -64,6 +70,7 @@ public sealed class BatteryMonitorEngine
             if (collections.Count == 0)
             {
                 var noDeviceStatus = BatteryStatus.CreateUnknown("Устройство или ресивер AJAZZ не найдены в PnP", ProviderState.DeviceNotFound);
+                ResetChargingDebounce(noDeviceStatus.ActiveTransport);
                 UpdateStatus(noDeviceStatus);
                 return noDeviceStatus;
             }
@@ -74,6 +81,7 @@ public sealed class BatteryMonitorEngine
             if (hidProvider == null)
             {
                 var noProviderStatus = BatteryStatus.CreateUnknown("Подходящий HID провайдер не найден", ProviderState.UnsupportedProtocol);
+                ResetChargingDebounce(noProviderStatus.ActiveTransport);
                 UpdateStatus(noProviderStatus);
                 return noProviderStatus;
             }
@@ -93,6 +101,7 @@ public sealed class BatteryMonitorEngine
                 var status = await hidProvider.ReadStatusAsync(collection, cancellationToken);
                 if (status.IsPresent && status.Percent.HasValue)
                 {
+                    status = ApplyChargingDebounce(status);
                     _consecutiveErrors = 0;
                     _lastSuccessfulRead = status.Timestamp;
                     ProcessNotifications(status, collection.ModelName);
@@ -101,6 +110,7 @@ public sealed class BatteryMonitorEngine
                 }
                 else if (status.DiagnosticMessage != null && status.DiagnosticMessage.Contains("заняло"))
                 {
+                    ResetChargingDebounce(status.ActiveTransport);
                     _notifications.NotifyDeviceConflict(status.DiagnosticMessage);
                     UpdateStatus(status);
                     return status;
@@ -114,17 +124,22 @@ public sealed class BatteryMonitorEngine
             var fallbackStatus = new BatteryStatus(
                 IsPresent: true,
                 Percent: isStale ? null : _lastStatus.Percent,
-                IsCharging: _lastStatus.IsCharging,
-                IsFullyCharged: _lastStatus.IsFullyCharged,
+                // A telemetry gap must not carry a charging claim across a
+                // sleep, device-session or transport transition.
+                IsCharging: null,
+                IsFullyCharged: null,
                 IsSleeping: _lastStatus.IsSleeping,
                 ConnectionMode: sortedCollections[0].ConnectionMode,
                 Timestamp: DateTimeOffset.UtcNow,
                 Confidence: isStale ? StatusConfidence.Stale : StatusConfidence.Low,
                 DiagnosticMessage: isStale ? "Данные батареи устарели (>10 мин без ответа)" : $"Ресивер найден (0x{sortedCollections[0].VendorId:X4}:0x{sortedCollections[0].ProductId:X4}), но кадр 0x05 не содержит заряд",
                 State: ProviderState.TelemetryNotReady,
-                ActiveTransport: $"HID (0x{sortedCollections[0].VendorId:X4}:0x{sortedCollections[0].ProductId:X4})"
+                ActiveTransport: $"HID (0x{sortedCollections[0].VendorId:X4}:0x{sortedCollections[0].ProductId:X4})",
+                BatteryTimestamp: isStale ? null : _lastStatus.BatteryTimestamp,
+                ConnectionStateTimestamp: DateTimeOffset.UtcNow
             );
 
+            ResetChargingDebounce(fallbackStatus.ActiveTransport);
             UpdateStatus(fallbackStatus);
             return fallbackStatus;
         }
@@ -136,6 +151,7 @@ public sealed class BatteryMonitorEngine
         {
             _consecutiveErrors++;
             var errStatus = BatteryStatus.CreateUnknown($"Ошибка опроса: {ex.Message}", ProviderState.Error);
+            ResetChargingDebounce(errStatus.ActiveTransport);
             UpdateStatus(errStatus);
             return errStatus;
         }
@@ -154,7 +170,7 @@ public sealed class BatteryMonitorEngine
             return TimeSpan.FromSeconds(60);
         }
 
-        if (_lastStatus.IsCharging == true)
+        if (_lastStatus.IsChargingConfirmed)
         {
             return TimeSpan.FromSeconds(15);
         }
@@ -166,6 +182,68 @@ public sealed class BatteryMonitorEngine
     {
         _lastStatus = status;
         _onStatusUpdated(status);
+    }
+
+    private BatteryStatus ApplyChargingDebounce(BatteryStatus status)
+    {
+        if (!status.HasConfirmedChargingState || status.IsSleeping)
+        {
+            ResetChargingDebounce(status.ActiveTransport);
+            return status with
+            {
+                IsCharging = null,
+                IsFullyCharged = null,
+                ChargingConfidence = ChargingConfidence.Unknown,
+                ChargingStateTimestamp = null,
+                ChargingDebounceCount = 0
+            };
+        }
+
+        bool transportChanged = !StringComparer.Ordinal.Equals(_chargingTransport, status.ActiveTransport);
+        bool candidate = status.IsCharging!.Value;
+        if (transportChanged || _pendingChargingState != candidate)
+        {
+            _chargingTransport = status.ActiveTransport;
+            _pendingChargingState = candidate;
+            _pendingChargingCount = 1;
+        }
+        else
+        {
+            _pendingChargingCount++;
+        }
+
+        if (_acceptedChargingState != candidate && _pendingChargingCount < 2)
+        {
+            return status with
+            {
+                IsCharging = null,
+                IsFullyCharged = null,
+                ChargingConfidence = ChargingConfidence.Unknown,
+                ChargingStateTimestamp = null,
+                ChargingDebounceCount = _pendingChargingCount
+            };
+        }
+
+        if (_acceptedChargingState != candidate)
+        {
+            _acceptedChargingState = candidate;
+            _acceptedChargingStateAt = status.Timestamp;
+        }
+
+        return status with
+        {
+            ChargingStateTimestamp = _acceptedChargingStateAt,
+            ChargingDebounceCount = _pendingChargingCount
+        };
+    }
+
+    private void ResetChargingDebounce(string activeTransport)
+    {
+        _acceptedChargingState = null;
+        _pendingChargingState = null;
+        _pendingChargingCount = 0;
+        _chargingTransport = activeTransport;
+        _acceptedChargingStateAt = null;
     }
 
     private void ProcessNotifications(BatteryStatus status, string model)
@@ -206,6 +284,12 @@ public sealed class BatteryMonitorEngine
                 _notifiedLow10 = false;
                 _notifiedLow20 = false;
             }
+        }
+
+        if (!status.IsCharging.HasValue || status.ChargingConfidence < ChargingConfidence.ProtocolConfirmed)
+        {
+            _wasCharging = null;
+            return;
         }
 
         if (status.IsCharging.HasValue)

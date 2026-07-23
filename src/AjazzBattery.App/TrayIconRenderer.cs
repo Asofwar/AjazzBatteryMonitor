@@ -23,7 +23,7 @@ public static class TrayIconRenderer
             {
                 bgColor = Color.FromArgb(120, 120, 120);
             }
-            else if (status.IsCharging == true)
+            else if (status.IsChargingConfirmed)
             {
                 bgColor = Color.FromArgb(0, 150, 255);
             }
@@ -83,7 +83,7 @@ public static class TrayIconRenderer
             g.DrawString(text, font, textBrush, new RectangleF(0, 0, width, height), sf);
 
             // Draw subtle lightning bolt indicator if charging
-            if (status.IsCharging == true && status.Percent.HasValue)
+            if (status.IsChargingConfirmed && status.Percent.HasValue)
             {
                 using var boltBrush = new SolidBrush(Color.Yellow);
                 var boltPoints = new PointF[]

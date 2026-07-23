@@ -450,15 +450,15 @@ public sealed class MainForm : ThemeAwareForm
         // Header Badges
         if (isPresent)
         {
-            string stStr = status.IsCharging == true ? "Заряжается ⚡" : (status.IsSleeping ? "Мышь спит" : "Подключена");
+            string stStr = status.IsChargingConfirmed ? "Заряжается ⚡" : (status.IsSleeping ? "Мышь спит" : "Подключена");
             _lblBadgeStatus.Text = stStr;
-            _lblBadgeStatus.ForeColor = ThemeManager.GetBatteryLevelColor(status.Percent, status.IsCharging == true, status.IsSleeping);
+            _lblBadgeStatus.ForeColor = ThemeManager.GetBatteryLevelColor(status.Percent, status.IsChargingConfirmed, status.IsSleeping);
 
             string trStr = status.ConnectionMode == ConnectionMode.BluetoothLe || status.ActiveTransport.Contains("BLE", StringComparison.OrdinalIgnoreCase) ? "Bluetooth LE" : "2.4 GHz HID";
             _lblBadgeTransport.Text = trStr;
             _lblBadgeTransport.Visible = true;
 
-            _lblFooterDot.ForeColor = ThemeManager.GetBatteryLevelColor(status.Percent, status.IsCharging == true, status.IsSleeping);
+            _lblFooterDot.ForeColor = ThemeManager.GetBatteryLevelColor(status.Percent, status.IsChargingConfirmed, status.IsSleeping);
             _lblFooterStatus.Text = $"{trStr} · Обновлено {SystemClock.Instance.FormatRelativeTime(status.Timestamp)}";
         }
         else

@@ -51,12 +51,24 @@ public sealed class BatteryNotificationService
         BatteryStatus status,
         CancellationToken cancellationToken = default)
     {
+        if (!status.IsChargingConfirmed
+            || status.IsSleeping
+            || status.Confidence == StatusConfidence.Stale
+            || status.State == ProviderState.InvalidFrame)
+        {
+            // Never keep a charging transition through sleep, an unconfirmed
+            // frame, or a transport/session boundary.
+            _state.WasCharging = null;
+        }
+
         if (!_settings.NotificationsEnabled) return;
         if (!status.IsPresent || !status.Percent.HasValue || status.IsSleeping) return;
         if (status.Confidence == StatusConfidence.Stale || status.State == ProviderState.InvalidFrame) return;
 
         int currentPercent = status.Percent.Value;
-        bool isCharging = status.IsCharging == true;
+        bool hasConfirmedChargingState = status.IsCharging.HasValue
+            && status.ChargingConfidence >= ChargingConfidence.ProtocolConfirmed;
+        bool isCharging = hasConfirmedChargingState && status.IsCharging == true;
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
         // 1. Handle Charging Notifications
@@ -85,9 +97,15 @@ public sealed class BatteryNotificationService
             _state.LastPercent = currentPercent;
             return; // Skip low battery notifications while charging
         }
-        else
+        else if (hasConfirmedChargingState)
         {
             _state.WasCharging = false;
+        }
+        else
+        {
+            // Unknown or estimated data must not create a charging transition
+            // after a transport/session change.
+            _state.WasCharging = null;
         }
 
         // 2. Anomaly Filter (>20% drop in a single poll)

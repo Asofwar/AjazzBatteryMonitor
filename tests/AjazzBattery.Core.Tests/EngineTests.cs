@@ -7,6 +7,17 @@ namespace AjazzBattery.Core.Tests;
 
 public class EngineTests
 {
+    private sealed class SequenceProvider : IMouseBatteryProvider
+    {
+        private readonly Queue<BatteryStatus> _statuses;
+        public string ProviderId => "SequenceProvider";
+
+        public SequenceProvider(params BatteryStatus[] statuses) => _statuses = new(statuses);
+        public bool CanHandle(DeviceDescriptor device) => true;
+        public Task<BatteryStatus> ReadStatusAsync(DeviceDescriptor device, CancellationToken cancellationToken) =>
+            Task.FromResult(_statuses.Dequeue());
+    }
+
     private class TestNotificationService : INotificationService
     {
         public List<int> LowBatteryNotified { get; } = new();
@@ -90,5 +101,24 @@ public class EngineTests
 
         Assert.Single(notify.LowBatteryNotified);
         Assert.Equal(20, notify.LowBatteryNotified[0]);
+    }
+
+    [Fact]
+    public async Task PollOnceAsync_InvalidFrameResetsChargingDebounce()
+    {
+        BatteryStatus confirmed = new(true, 50, true, null, false, ConnectionMode.Wireless24G,
+            DateTimeOffset.UtcNow, StatusConfidence.High, null, ProviderState.Connected, "HID",
+            ChargingConfidence: ChargingConfidence.ProtocolConfirmed);
+        BatteryStatus invalid = new(true, null, null, null, false, ConnectionMode.Wireless24G,
+            DateTimeOffset.UtcNow, StatusConfidence.Low, "invalid", ProviderState.InvalidFrame, "HID");
+        var transport = new MockHidTransport();
+        var provider = new SequenceProvider(confirmed, confirmed, invalid, confirmed, confirmed);
+        var engine = new BatteryMonitorEngine(new[] { provider }, transport, new TestNotificationService(), _ => { });
+
+        Assert.Null((await engine.PollOnceAsync(CancellationToken.None)).IsCharging);
+        Assert.True((await engine.PollOnceAsync(CancellationToken.None)).IsChargingConfirmed);
+        Assert.Null((await engine.PollOnceAsync(CancellationToken.None)).IsCharging);
+        Assert.Null((await engine.PollOnceAsync(CancellationToken.None)).IsCharging);
+        Assert.True((await engine.PollOnceAsync(CancellationToken.None)).IsChargingConfirmed);
     }
 }

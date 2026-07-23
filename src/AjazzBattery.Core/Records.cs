@@ -31,9 +31,19 @@ public sealed record BatteryStatus(
     string? DiagnosticMessage,
     ProviderState State = ProviderState.DeviceNotFound,
     string ActiveTransport = "None",
-    byte[]? RawFrameHex = null
+    byte[]? RawFrameHex = null,
+    ChargingConfidence ChargingConfidence = ChargingConfidence.Unknown,
+    DateTimeOffset? BatteryTimestamp = null,
+    DateTimeOffset? ChargingStateTimestamp = null,
+    DateTimeOffset? ConnectionStateTimestamp = null,
+    int ChargingDebounceCount = 0
 )
 {
+    public bool HasConfirmedChargingState =>
+        IsCharging.HasValue && ChargingConfidence >= global::AjazzBattery.Core.ChargingConfidence.ProtocolConfirmed;
+
+    public bool IsChargingConfirmed => HasConfirmedChargingState && IsCharging == true;
+
     public static BatteryStatus CreateUnknown(string? diagnosticMessage = null, ProviderState state = ProviderState.DeviceNotFound) =>
         new(
             IsPresent: false,
@@ -46,7 +56,8 @@ public sealed record BatteryStatus(
             Confidence: StatusConfidence.Unknown,
             DiagnosticMessage: diagnosticMessage ?? "Заряд неизвестен",
             State: state,
-            ActiveTransport: "None"
+            ActiveTransport: "None",
+            ConnectionStateTimestamp: DateTimeOffset.UtcNow
         );
 }
 
