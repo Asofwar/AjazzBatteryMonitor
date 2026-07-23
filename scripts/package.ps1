@@ -2,9 +2,9 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path "$PSScriptRoot\.."
 $ArtifactsDir = "$RepoRoot\artifacts"
-$ExePath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.1.0.exe"
-$ZipPath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.1.0-portable.zip"
-$DiagZipPath = "$ArtifactsDir\AjazzBatteryMonitor-v1.1.0-diagnostics.zip"
+$ExePath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.1.1.exe"
+$ZipPath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.1.1-portable.zip"
+$DiagZipPath = "$ArtifactsDir\AjazzBatteryMonitor-v1.1.1-diagnostics.zip"
 
 if (-not (Test-Path $ExePath)) {
     Write-Error "Could not find $ExePath. Please run publish.ps1 first."
@@ -22,10 +22,9 @@ $DiagTempDir = "$ArtifactsDir\diag_temp"
 if (Test-Path $DiagTempDir) { Remove-Item -Recurse -Force $DiagTempDir }
 New-Item -ItemType Directory -Force -Path $DiagTempDir | Out-Null
 
-if (Test-Path "$RepoRoot\docs\ui-review-v1.0.2.md") { Copy-Item "$RepoRoot\docs\ui-review-v1.0.2.md" "$DiagTempDir\" }
+if (Test-Path "$RepoRoot\docs\ui-layout-defects-v1.1.0.md") { Copy-Item "$RepoRoot\docs\ui-layout-defects-v1.1.0.md" "$DiagTempDir\" }
 if (Test-Path "$RepoRoot\docs\ui-design.md") { Copy-Item "$RepoRoot\docs\ui-design.md" "$DiagTempDir\" }
 if (Test-Path "$RepoRoot\docs\notifications.md") { Copy-Item "$RepoRoot\docs\notifications.md" "$DiagTempDir\" }
-if (Test-Path "$RepoRoot\docs\runtime-failure-analysis.md") { Copy-Item "$RepoRoot\docs\runtime-failure-analysis.md" "$DiagTempDir\" }
 
 $LogPath = "$env:LOCALAPPDATA\AjazzBatteryMonitor\logs\startup.log"
 if (Test-Path $LogPath) {
