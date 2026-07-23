@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path "$PSScriptRoot\.."
-$installer = Join-Path $repoRoot 'artifacts\AjazzBatteryMonitor-Setup-v1.2.1.exe'
+$installer = Join-Path $repoRoot 'artifacts\AjazzBatteryMonitor-Setup-v1.3.0.exe'
 $installDir = Join-Path $env:LOCALAPPDATA 'Programs\AJAZZ Battery Monitor'
 $dataDir = Join-Path $env:LOCALAPPDATA 'AjazzBatteryMonitor'
 $marker = Join-Path $dataDir 'upgrade-preservation-test.txt'

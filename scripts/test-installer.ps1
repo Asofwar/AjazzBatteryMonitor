@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path "$PSScriptRoot\.."
-$installer = Join-Path $repoRoot 'artifacts\AjazzBatteryMonitor-Setup-v1.2.1.exe'
+$installer = Join-Path $repoRoot 'artifacts\AjazzBatteryMonitor-Setup-v1.3.0.exe'
 $installDir = Join-Path $env:LOCALAPPDATA 'Programs\AJAZZ Battery Monitor'
 $installedExe = Join-Path $installDir 'AjazzBattery.App.exe'
 $uninstaller = Join-Path $installDir 'unins000.exe'

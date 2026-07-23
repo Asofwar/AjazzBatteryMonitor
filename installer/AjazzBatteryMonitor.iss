@@ -1,11 +1,15 @@
-#define AppName "AJAZZ Battery Monitor"
-#define AppPublisher "AJAZZ Battery Monitor Contributors"
-#define AppURL "https://github.com/REPOSITORY_OWNER/AjazzBatteryMonitor"
-#define AppId "{{B1A09FE7-9E84-4A3A-A14B-4143A6B9E1E2}"
-#define PublishDir GetEnv("AJAZZ_PUBLISH_DIR")
-#define OutputDir GetEnv("AJAZZ_INSTALLER_OUTPUT")
-#define MyAppExeName "AjazzBattery.App.exe"
-#define MyAppVersion GetStringFileInfo(PublishDir + "\\" + MyAppExeName, "ProductVersion")
+; AJAZZ Battery Monitor — Inno Setup Script v1.3.0
+; https://jrsoftware.org/ishelp/
+
+#define AppName        "AJAZZ Battery Monitor"
+#define AppPublisher   "AJAZZ Battery Monitor Contributors"
+#define AppURL         "https://github.com/REPOSITORY_OWNER/AjazzBatteryMonitor"
+#define AppId          "{{B1A09FE7-9E84-4A3A-A14B-4143A6B9E1E2}"
+#define PublishDir     GetEnv("AJAZZ_PUBLISH_DIR")
+#define OutputDir      GetEnv("AJAZZ_INSTALLER_OUTPUT")
+#define MyAppExeName   "AjazzBatteryMonitor.exe"
+#define MyAppVersion   GetStringFileInfo(PublishDir + "\" + MyAppExeName, "ProductVersion")
+#define IconFile       "..\installer\assets\AppIcon.ico"
 
 [Setup]
 AppId={#AppId}
@@ -22,29 +26,54 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir={#OutputDir}
 OutputBaseFilename=AjazzBatteryMonitor-Setup-v{#MyAppVersion}
+SetupIconFile={#IconFile}
+UninstallDisplayName={#AppName}
+UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-UninstallDisplayName={#AppName}
-UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
+Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+; Desktop shortcut — unchecked by default
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+
+; Autostart with Windows — checked by default on first install, not reset on upgrade
+; Uses checkedonce so subsequent upgrades respect the user's previous choice
+Name: "autostart"; Description: "Запускать AJAZZ Battery Monitor вместе с Windows"; GroupDescription: "Дополнительные параметры:"; Flags: checkedonce
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
+Source: "..\installer\assets\AppIcon.ico"; DestDir: "{app}"; DestName: "AppIcon.ico"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+; Start Menu shortcut — no --background: manual launch opens the main window
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\AppIcon.ico"
+; Desktop shortcut — conditional on task
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\AppIcon.ico"; Tasks: desktopicon
+
+[Registry]
+; Autostart entry: runs with --background so it starts silently in the tray.
+; Note: closing quote is BEFORE --background (path may contain spaces).
+; Expected value: "C:\Users\...\AjazzBatteryMonitor.exe" --background
+Root: HKCU; \
+    Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
+    ValueType: string; \
+    ValueName: "AjazzBatteryMonitor"; \
+    ValueData: """{app}\{#MyAppExeName}"" --background"; \
+    Flags: uninsdeletevalue; \
+    Tasks: autostart
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
+; Post-install launch — no --background: opens the main window on Overview
+Filename: "{app}\{#MyAppExeName}"; \
+    Description: "Запустить {#AppName}"; \
+    Flags: nowait postinstall skipifsilent
 
 [Code]
 var
@@ -65,4 +94,15 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usUninstall) and Assigned(RemoveDataCheckBox) and RemoveDataCheckBox.Checked then
     DelTree(ExpandConstant('{localappdata}\AjazzBatteryMonitor'), True, True, True);
+end;
+
+{ Attempt graceful shutdown of a running instance before files are replaced }
+function InitializeSetup: Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  { Send ShutdownForUpdate via named pipe — best effort, ignore errors }
+  { The installer will proceed regardless }
+  Exec(ExpandConstant('{tmp}\shutdown-helper.exe'), '', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Background: dark rounded rect -->
+  <rect width="64" height="64" rx="14" ry="14" fill="#1e1e2e"/>
+
+  <!-- Mouse body outline: rounded rectangle, portrait, centred -->
+  <!-- Body: 20w x 30h, centered at (32,32), so x=22 y=14 -->
+  <rect x="21" y="12" width="22" height="30" rx="10" ry="10"
+        fill="none" stroke="#d0d0e8" stroke-width="2.5"/>
+
+  <!-- Center divider line (left/right button split) -->
+  <line x1="32" y1="12" x2="32" y2="26"
+        stroke="#d0d0e8" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Scroll wheel: small pill in center -->
+  <rect x="29.5" y="15" width="5" height="9" rx="2.5" ry="2.5"
+        fill="#a0a0c0"/>
+
+  <!-- Battery icon: bottom area of mouse body -->
+  <!-- Outer battery rect -->
+  <rect x="25" y="33" width="14" height="7" rx="2" ry="2"
+        fill="none" stroke="#4caf50" stroke-width="1.8"/>
+  <!-- Battery positive terminal nub -->
+  <rect x="39" y="35.5" width="2" height="2" rx="0.5" ry="0.5"
+        fill="#4caf50"/>
+  <!-- Battery fill: 75% charge -->
+  <rect x="26.2" y="34.2" width="9.0" height="4.6" rx="1" ry="1"
+        fill="#4caf50"/>
+
+  <!-- Lightning bolt: small, beside battery or inside mouse at top-right -->
+  <!-- Small bolt path, sits at top-right of mouse -->
+  <path d="M37 14 L34.5 19 L37 19 L34 25 L36.5 25 L33 30 L35 30 L32.5 36"
+        fill="none" stroke="#ffe066" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"
+        opacity="0"/>
+
+  <!-- Simpler lightning bolt badge at top-right corner -->
+  <g transform="translate(42, 10)">
+    <polygon points="6,0 2,7 5,7 0,14 8,14 5,7 8,7" fill="#ffe066" opacity="0.92"/>
+  </g>
+</svg>
