@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path "$PSScriptRoot\.."
-$ExePath = "$RepoRoot\artifacts\AjazzBatteryMonitor-win-x64-v1.0.2.exe"
+$ExePath = "$RepoRoot\artifacts\AjazzBatteryMonitor-win-x64-v1.1.0.exe"
 
 if (-not (Test-Path $ExePath)) {
     Write-Error "Executable not found at $ExePath. Run publish.ps1 first."

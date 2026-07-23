@@ -7,6 +7,7 @@ namespace AjazzBattery.App;
 internal static class Program
 {
     private static Mutex? _singleInstanceMutex;
+    private static EventWaitHandle? _activateEventHandle;
 
     [STAThread]
     private static void Main(string[] args)
@@ -14,7 +15,7 @@ internal static class Program
         // 1. Immediate Startup Logging BEFORE any UI, HID, or BLE initialization
         Logger.Log("STARTUP", "Process started");
         string exePath = Environment.ProcessPath ?? AppContext.BaseDirectory;
-        Logger.Log("STARTUP", "Application version: 1.0.2");
+        Logger.Log("STARTUP", "Application version: 1.1.0");
         Logger.Log("STARTUP", $"Executable path: {exePath}");
         Logger.Log("STARTUP", $"Runtime version: {Environment.Version}");
         Logger.Log("STARTUP", $"OS version: {Environment.OSVersion}");
@@ -30,10 +31,22 @@ internal static class Program
             e.SetObserved();
         };
 
-        // 3. Single-Instance Mutex Check
+        // 3. Command Line Flag Parsing
         bool allowMultiple = args.Contains("--allow-multiple-instances");
         bool isSmokeTest = args.Contains("--smoke-test");
+        bool isSmokeTestUi = args.Contains("--smoke-test-ui");
+        bool isSmokeTestNotification = args.Contains("--smoke-test-notification");
 
+        int? mockBattery = null;
+        foreach (var arg in args)
+        {
+            if (arg.StartsWith("--mock-battery="))
+            {
+                if (int.TryParse(arg.Substring("--mock-battery=".Length), out int mb)) mockBattery = mb;
+            }
+        }
+
+        // 4. Single-Instance Mutex & IPC Event Check
         if (!allowMultiple)
         {
             Logger.Log("MUTEX", "Single-instance check started");
@@ -50,23 +63,50 @@ internal static class Program
 
             if (!createdNew)
             {
-                Logger.Log("MUTEX", "Second instance detected - alerting and exiting.");
-                MessageBox.Show(
-                    "Приложение AJAZZ Battery Monitor уже запущено в системном трее.",
-                    "AJAZZ Battery Monitor",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                Logger.Log("MUTEX", "Second instance detected - signaling active instance via IPC and exiting.");
+                try
+                {
+                    using var evt = EventWaitHandle.OpenExisting(@"Local\AjazzBatteryMonitor_Activate");
+                    evt.Set();
+                }
+                catch { }
+
                 return;
             }
             Logger.Log("MUTEX", "Single-instance check passed");
         }
 
-        // 4. Initialize WinForms UI Loop
+        // Create IPC Event Handle for activating window when 2nd instance is launched
+        _activateEventHandle = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\AjazzBatteryMonitor_Activate");
+
+        // 5. Initialize WinForms UI Loop
         try
         {
             ApplicationConfiguration.Initialize();
-            Application.Run(new TrayApplicationContext(isSmokeTest));
+            var context = new TrayApplicationContext(isSmokeTest, isSmokeTestUi, mockBattery);
+
+            // Background IPC listener thread
+            _ = Task.Run(() =>
+            {
+                while (_activateEventHandle.WaitOne())
+                {
+                    Logger.Log("IPC", "Activation signal received from second instance - showing MainForm.");
+                    try
+                    {
+                        if (Application.OpenForms.Count > 0)
+                        {
+                            Application.OpenForms[0]?.BeginInvoke(() => context.ShowMainForm());
+                        }
+                        else
+                        {
+                            context.ShowMainForm();
+                        }
+                    }
+                    catch { }
+                }
+            });
+
+            Application.Run(context);
         }
         catch (Exception ex)
         {
@@ -74,6 +114,7 @@ internal static class Program
         }
         finally
         {
+            _activateEventHandle?.Dispose();
             _singleInstanceMutex?.ReleaseMutex();
         }
     }

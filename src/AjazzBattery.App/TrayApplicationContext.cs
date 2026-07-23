@@ -1,6 +1,10 @@
 using System.Windows.Forms;
 using Microsoft.Win32;
+using AjazzBattery.App.UI.Notifications;
+using AjazzBattery.App.UI.Rendering;
+using AjazzBattery.App.UI.Theme;
 using AjazzBattery.Core;
+using AjazzBattery.Core.Notifications;
 using AjazzBattery.Devices;
 using AjazzBattery.Hid;
 using AjazzBattery.Bluetooth;
@@ -10,64 +14,66 @@ namespace AjazzBattery.App;
 
 public sealed class TrayApplicationContext : ApplicationContext
 {
+    private static int _activeTrayInstanceCount = 0;
+
     private readonly NotifyIcon _notifyIcon;
     private readonly BatteryMonitorEngine _engine;
+    private readonly BatteryNotificationService _notificationService;
     private readonly BatteryHistoryStorage _storage;
     private readonly WindowsAutoStartManager _autoStartManager;
     private readonly CancellationTokenSource _pollCts;
-    private DetailsForm? _detailsForm;
+    private MainForm? _mainForm;
     private Icon? _currentIcon;
     private readonly bool _isSmokeTest;
+    private readonly bool _isSmokeTestUi;
 
-    public TrayApplicationContext(bool isSmokeTest)
+    public TrayApplicationContext(bool isSmokeTest = false, bool isSmokeTestUi = false, int? mockPercent = null)
     {
         _isSmokeTest = isSmokeTest;
+        _isSmokeTestUi = isSmokeTestUi;
 
-        Logger.Log("TRAY", "Tray initialization started");
+        Interlocked.Increment(ref _activeTrayInstanceCount);
+        Logger.Log("TRAY", $"Tray instance created (Active instance count: {_activeTrayInstanceCount})");
 
         _storage = new BatteryHistoryStorage();
         _autoStartManager = new WindowsAutoStartManager();
         _pollCts = new CancellationTokenSource();
 
-        // 1. Create NotifyIcon and Context Menu IMMEDIATELY before starting hardware operations
+        // 1. Create NotifyIcon & Context Menu IMMEDIATELY before starting hardware operations
         _notifyIcon = new NotifyIcon
         {
-            Text = "AJAZZ Battery Monitor — Заряд неизвестен",
+            Text = "AJAZZ AJ179 APEX — Заряд неизвестен",
             Visible = true
         };
 
         UpdateTrayIconInternal(BatteryStatus.CreateUnknown());
-        Logger.Log("TRAY", "Tray icon created");
-        Logger.Log("TRAY", "Tray icon made visible");
+        Logger.Log("TRAY", "Tray icon created and made visible");
 
-        SetupContextMenu();
-        _notifyIcon.DoubleClick += (s, e) => ShowDetailsForm();
-
-        // 2. Initialize Providers & Engine
-        Logger.Log("TRAY", "Monitor engine starting");
+        // 2. Initialize Providers & Notification Engine
         IHidTransport transport = new Win32HidTransport();
         var registry = new DeviceProfileRegistry();
 
-        Logger.Log("BLE", "BLE enumeration started");
         var bleProvider = new BleBatteryProvider();
-
-        Logger.Log("HID", "HID enumeration started");
         var hidProvider = new AjazzMouseBatteryProvider(transport, registry);
 
-        var notificationService = new WindowsNotificationService(_notifyIcon);
+        var primaryTransport = new WindowsToastNotificationTransport();
+        var fallbackTransport = new NotifyIconBalloonNotificationTransport(_notifyIcon);
+        _notificationService = new BatteryNotificationService(primaryTransport, fallbackTransport);
 
-        // BLE provider takes priority over HID when paired/connected
         _engine = new BatteryMonitorEngine(
             new IMouseBatteryProvider[] { bleProvider, hidProvider },
             transport,
-            notificationService,
+            new LegacyNotificationServiceBridge(_notificationService),
             OnStatusUpdated
         );
+
+        SetupContextMenu();
+        _notifyIcon.DoubleClick += (s, e) => ShowMainForm();
 
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.SessionSwitch += OnSessionSwitch;
 
-        // 3. Start Background Polling
+        // 3. Start Background Polling Loop
         _ = RunPollingLoopAsync(_pollCts.Token);
         Logger.Log("MAIN", "Application startup completed");
 
@@ -83,29 +89,28 @@ public sealed class TrayApplicationContext : ApplicationContext
             };
             timer.Start();
         }
+        else if (_isSmokeTestUi)
+        {
+            Logger.Log("SMOKE_UI", "Smoke test UI mode active - opening MainForm...");
+            ShowMainForm();
+        }
     }
 
     private void SetupContextMenu()
     {
         var contextMenu = new ContextMenuStrip();
 
-        var openItem = new ToolStripMenuItem("Открыть", null, (s, e) => ShowDetailsForm());
+        var headerItem = new ToolStripMenuItem("AJAZZ AJ179 APEX") { Enabled = false };
+        var subHeaderItem = new ToolStripMenuItem("— · —") { Enabled = false };
+
+        var openItem = new ToolStripMenuItem("Открыть монитор", null, (s, e) => ShowMainForm());
         var refreshItem = new ToolStripMenuItem("Обновить заряд", null, async (s, e) =>
         {
             var st = await _engine.PollOnceAsync(CancellationToken.None);
             OnStatusUpdated(st);
         });
 
-        var diagItem = new ToolStripMenuItem("Диагностика", null, (s, e) =>
-        {
-            var diagForm = new DiagnosticsForm(_engine);
-            diagForm.ShowDialog();
-        });
-
-        var logsItem = new ToolStripMenuItem("Открыть папку логов", null, (s, e) =>
-        {
-            try { System.Diagnostics.Process.Start("explorer.exe", Logger.LogDirectoryPath); } catch { }
-        });
+        var historyItem = new ToolStripMenuItem("История", null, (s, e) => ShowMainForm());
 
         var autoStartItem = new ToolStripMenuItem("Автозапуск", null, (s, e) =>
         {
@@ -118,29 +123,38 @@ public sealed class TrayApplicationContext : ApplicationContext
         });
         autoStartItem.Checked = _autoStartManager.IsAutoStartEnabled();
 
+        var diagItem = new ToolStripMenuItem("Диагностика", null, (s, e) =>
+        {
+            var diagForm = new DiagnosticsForm(_engine);
+            diagForm.ShowDialog();
+        });
+
         var exitItem = new ToolStripMenuItem("Выход", null, (s, e) => ExitApplication());
 
+        contextMenu.Items.Add(headerItem);
+        contextMenu.Items.Add(subHeaderItem);
+        contextMenu.Items.Add(new ToolStripSeparator());
         contextMenu.Items.Add(openItem);
         contextMenu.Items.Add(refreshItem);
+        contextMenu.Items.Add(historyItem);
         contextMenu.Items.Add(new ToolStripSeparator());
-        contextMenu.Items.Add(diagItem);
-        contextMenu.Items.Add(logsItem);
         contextMenu.Items.Add(autoStartItem);
         contextMenu.Items.Add(new ToolStripSeparator());
+        contextMenu.Items.Add(diagItem);
         contextMenu.Items.Add(exitItem);
 
         _notifyIcon.ContextMenuStrip = contextMenu;
     }
 
-    private void ShowDetailsForm()
+    public void ShowMainForm()
     {
-        if (_detailsForm == null || _detailsForm.IsDisposed)
+        if (_mainForm == null || _mainForm.IsDisposed)
         {
-            _detailsForm = new DetailsForm(_engine, _autoStartManager, _storage);
+            _mainForm = new MainForm(_engine, _notificationService, _autoStartManager, _storage);
         }
-        _detailsForm.Show();
-        _detailsForm.BringToFront();
-        _detailsForm.Activate();
+        _mainForm.Show();
+        _mainForm.BringToFront();
+        _mainForm.Activate();
     }
 
     private void OnStatusUpdated(BatteryStatus status)
@@ -150,13 +164,20 @@ public sealed class TrayApplicationContext : ApplicationContext
             UpdateTrayIconInternal(status);
 
             string pctStr = status.Percent.HasValue ? $"{status.Percent}%" : "заряд неизвестен";
-            string stateStr = status.IsCharging == true ? "заряжается" : (status.IsSleeping ? "в режиме сна" : (status.IsPresent ? "подключена" : "отключена"));
-            string timeStr = status.Timestamp.ToString("HH:mm:ss");
+            string stateStr = status.IsCharging == true ? "заряжается ⚡" : (status.IsSleeping ? "в режиме сна" : (status.IsPresent ? "подключена" : "отключена"));
+            string connStr = status.ActiveTransport.Contains("BLE") ? "Bluetooth LE" : (status.ActiveTransport.Contains("HID") ? "2.4 GHz" : "—");
 
-            _notifyIcon.Text = $"AJAZZ AJ179 APEX\nЗаряд: {pctStr}\nСостояние: {stateStr}\nОбновлено: {timeStr}";
+            _notifyIcon.Text = $"AJAZZ AJ179 APEX\nЗаряд: {pctStr}\nСостояние: {stateStr}\nТранспорт: {connStr}";
+
+            if (_notifyIcon.ContextMenuStrip != null && _notifyIcon.ContextMenuStrip.Items.Count > 1)
+            {
+                _notifyIcon.ContextMenuStrip.Items[1].Text = $"{pctStr} · {connStr}";
+            }
 
             _storage.AppendHistory(status.Percent, status.IsCharging, status.ConnectionMode.ToString());
-            _detailsForm?.UpdateUi(status);
+            _mainForm?.UpdateUi(status);
+
+            _ = _notificationService.ProcessBatteryUpdateAsync(status);
         }
         catch (Exception ex)
         {
@@ -171,7 +192,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         _currentIcon = newIcon;
         _notifyIcon.Icon = newIcon;
 
-        // Dispose old icon after switching handle to prevent GDI leak
+        // Dispose previous Icon AFTER handle assignment to prevent GDI leaks
         oldIcon?.Dispose();
     }
 
@@ -223,6 +244,21 @@ public sealed class TrayApplicationContext : ApplicationContext
         _notifyIcon.Dispose();
         _currentIcon?.Dispose();
 
+        Interlocked.Decrement(ref _activeTrayInstanceCount);
+        Logger.Log("TRAY", $"Tray instance disposed (Remaining count: {_activeTrayInstanceCount})");
+
         ExitThread();
+    }
+
+    private class LegacyNotificationServiceBridge : INotificationService
+    {
+        private readonly BatteryNotificationService _service;
+        public LegacyNotificationServiceBridge(BatteryNotificationService service) => _service = service;
+
+        public void NotifyLowBattery(int percentage, string model) { }
+        public void NotifyChargingStarted(string model) { }
+        public void NotifyChargingCompleted(string model) { }
+        public void NotifyLongDisconnection(string model) { }
+        public void NotifyDeviceConflict(string message) { }
     }
 }

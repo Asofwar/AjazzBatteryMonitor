@@ -1,19 +1,17 @@
-# Third-Party Notices & Attribution
+# Third-Party Notices & Licenses
 
-This project incorporates protocol specifications and architectural ideas inspired by the following open-source projects:
+This project is built using native .NET 8.0 SDK, WinForms, and WinRT APIs without external third-party GUI framework dependencies.
 
-1. **Aj179PStat** (`https://github.com/GetTheNya/Aj179PStat`)
-   - License: MIT
-   - Contribution: Concept for C# Windows system tray integration.
+---
 
-2. **Nibble** (`https://github.com/mahammadismayilov/nibble`)
-   - License: MIT
-   - Contribution: WebHID protocol reference definitions for AJAZZ line mice.
+## 1. .NET 8.0 Runtime & Libraries
+- **License**: MIT License
+- **Copyright**: (c) .NET Foundation and Contributors.
 
-3. **AJAZZ Control Center** (`https://github.com/Aiacos/ajazz-control-center`)
-   - License: GPL-3.0
-   - Contribution: Multi-PID device mapping tables and backend abstraction.
+---
 
-4. **AJ179 Linux Battery** (`https://github.com/Rockeyxx/AJ179-linux-battery`)
-   - License: MIT
-   - Contribution: Yichip `0x20` / `0xF7` feature report byte layout specifications.
+## 2. Upstream Open Source References
+- **ajazz-control-center**:
+  - **URL**: https://github.com/Aiacos/ajazz-control-center
+  - **License**: GPL-3.0
+  - **Usage**: Used as protocol reference for AJAZZ AJ series mouse hardware packet structure (`0xF7` SET_FEATURE status poll and `0x05` GET_FEATURE frame).
