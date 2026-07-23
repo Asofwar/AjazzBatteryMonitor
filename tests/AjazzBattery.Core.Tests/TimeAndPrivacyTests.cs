@@ -63,7 +63,8 @@ public class TimeAndPrivacyTests
     [Fact]
     public void TestLogger_RedactsBluetoothMacAndDeviceIds()
     {
-        const string raw = "Found matching BLE Device: AJ179 APEX (BluetoothLE#[redacted]vice-id)";
+        const string identifierPrefix = "BluetoothLE#BluetoothLE";
+        string raw = $"Found matching BLE Device: AJ179 APEX ({identifierPrefix}device-id)";
         string redacted = Logger.RedactSensitiveData(raw);
 
         Assert.DoesNotContain("device-id", redacted);
