@@ -10,7 +10,7 @@ if (-not (Test-Path $ArtifactsDir)) {
 Write-Output "Cleaning old artifacts..."
 Get-ChildItem -Path $ArtifactsDir -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-Write-Output "Publishing AjazzBattery.App v1.0.1 as a single-file executable..."
+Write-Output "Publishing AjazzBattery.App v1.0.2 as a single-file executable..."
 dotnet publish "$RepoRoot\src\AjazzBattery.App\AjazzBattery.App.csproj" `
     -c Release `
     -r win-x64 `
@@ -22,11 +22,11 @@ dotnet publish "$RepoRoot\src\AjazzBattery.App\AjazzBattery.App.csproj" `
 
 $PublishedExe = Get-ChildItem -Path "$ArtifactsDir\publish_temp" -Filter "*.exe" | Select-Object -First 1
 if ($PublishedExe) {
-    Copy-Item $PublishedExe.FullName -Destination "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.0.1.exe" -Force
-    # Keep legacy name as alias for backward compatibility
+    Copy-Item $PublishedExe.FullName -Destination "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.0.2.exe" -Force
+    # Maintain alias for convenience
     Copy-Item $PublishedExe.FullName -Destination "$ArtifactsDir\AjazzBatteryMonitor-win-x64.exe" -Force
     Remove-Item -Recurse -Force "$ArtifactsDir\publish_temp"
-    Write-Output "Published EXE to: $ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.0.1.exe"
+    Write-Output "Published EXE to: $ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.0.2.exe"
 } else {
     Write-Error "Could not find the published executable."
 }

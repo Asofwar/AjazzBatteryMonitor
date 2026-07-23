@@ -1,22 +1,18 @@
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
+using Windows.Storage.Streams;
 using AjazzBattery.Core;
 
 namespace AjazzBattery.Bluetooth;
 
 public sealed class BleBatteryProvider : IMouseBatteryProvider
 {
-    private static readonly Guid BatteryServiceUuid = GattDeviceService.ConvertShortIdToUuid(0x180F);
-    private static readonly Guid BatteryLevelCharUuid = GattCharacteristicUuids.BatteryLevel;
-
     public string ProviderId => "AjazzBleBatteryProvider";
 
     public bool CanHandle(DeviceDescriptor device)
     {
-        return device.ConnectionMode == ConnectionMode.BluetoothLe ||
-               device.ModelName.Contains("AJ179", StringComparison.OrdinalIgnoreCase) ||
-               device.ModelName.Contains("AJAZZ", StringComparison.OrdinalIgnoreCase);
+        return device.ConnectionMode == ConnectionMode.BluetoothLe || device.DevicePath.Contains("BTH", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<BatteryStatus> ReadStatusAsync(
@@ -25,91 +21,103 @@ public sealed class BleBatteryProvider : IMouseBatteryProvider
     {
         try
         {
-            string selector = GattDeviceService.GetDeviceSelectorFromUuid(BatteryServiceUuid);
+            Logger.Log("BLE_PROBE", "Searching paired Bluetooth LE devices...");
+
+            string selector = BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
             var devices = await DeviceInformation.FindAllAsync(selector).AsTask(cancellationToken);
 
             if (devices.Count == 0)
             {
-                return BatteryStatus.CreateUnknown("BLE устройство с Battery Service не найдено");
+                Logger.Log("BLE_PROBE", "No paired Bluetooth LE devices found in Windows registry");
+                return BatteryStatus.CreateUnknown("Сопряженные устройства Bluetooth LE не найдены", ProviderState.DeviceNotFound);
             }
 
-            DeviceInformation? targetDev = devices.FirstOrDefault(d =>
-                d.Name.Contains("AJ179", StringComparison.OrdinalIgnoreCase) ||
-                d.Name.Contains("AJAZZ", StringComparison.OrdinalIgnoreCase)
-            ) ?? devices[0];
+            DeviceInformation? targetDeviceInfo = null;
+            foreach (var d in devices)
+            {
+                if (d.Name.Contains("179", StringComparison.OrdinalIgnoreCase) ||
+                    d.Name.Contains("AJAZZ", StringComparison.OrdinalIgnoreCase) ||
+                    d.Id.Contains("3151", StringComparison.OrdinalIgnoreCase))
+                {
+                    targetDeviceInfo = d;
+                    break;
+                }
+            }
 
-            using var bleDevice = await BluetoothLEDevice.FromIdAsync(targetDev.Id).AsTask(cancellationToken);
+            if (targetDeviceInfo == null)
+            {
+                Logger.Log("BLE_PROBE", $"Found {devices.Count} BLE devices, but none matched AJAZZ/AJ179.");
+                return BatteryStatus.CreateUnknown($"Устройство AJAZZ не найдено среди {devices.Count} сопряженных BLE устройств", ProviderState.BluetoothPairedButDisconnected);
+            }
+
+            Logger.Log("BLE_PROBE", $"Found matching BLE Device: {targetDeviceInfo.Name} ({targetDeviceInfo.Id})");
+
+            using var bleDevice = await BluetoothLEDevice.FromIdAsync(targetDeviceInfo.Id).AsTask(cancellationToken);
             if (bleDevice == null)
             {
-                return BatteryStatus.CreateUnknown("Не удалось открыть BluetoothLEDevice");
+                Logger.Log("BLE_PROBE", "BluetoothLEDevice.FromIdAsync returned null");
+                return BatteryStatus.CreateUnknown("Не удалось открыть BluetoothLEDevice", ProviderState.BluetoothPairedButDisconnected);
             }
 
-            if (bleDevice.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
+            if (bleDevice.ConnectionStatus != BluetoothConnectionStatus.Connected)
             {
-                return new BatteryStatus(
-                    IsPresent: true,
-                    Percent: null,
-                    IsCharging: false,
-                    IsFullyCharged: false,
-                    IsSleeping: true,
-                    ConnectionMode: ConnectionMode.BluetoothLe,
-                    Timestamp: DateTimeOffset.UtcNow,
-                    Confidence: StatusConfidence.Low,
-                    DiagnosticMessage: "BLE устройство в режиме сна / не подключено"
-                );
+                Logger.Log("BLE_PROBE", $"BLE Device {bleDevice.Name} is PAIRED but currently DISCONNECTED (ConnectionStatus: {bleDevice.ConnectionStatus})");
+                return BatteryStatus.CreateUnknown($"Мышь сопряжена по BLE ({bleDevice.Name}), но отключена (Disconnected)", ProviderState.BluetoothPairedButDisconnected);
             }
 
-            var servicesResult = await bleDevice.GetGattServicesForUuidAsync(BatteryServiceUuid, BluetoothCacheMode.Uncached).AsTask(cancellationToken);
-            if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
+            Logger.Log("BLE_PROBE", $"BLE Device {bleDevice.Name} is CONNECTED. Querying GATT Battery Service 0x180F...");
+
+            var gattResult = await bleDevice.GetGattServicesForUuidAsync(GattServiceUuids.Battery).AsTask(cancellationToken);
+            if (gattResult.Status != GattCommunicationStatus.Success || gattResult.Services.Count == 0)
             {
-                return BatteryStatus.CreateUnknown($"Ошибка чтения GATT Service: {servicesResult.Status}");
+                Logger.Log("BLE_PROBE", $"GattServices query status: {gattResult.Status}");
+                return BatteryStatus.CreateUnknown("Battery Service (0x180F) недоступен на подключенном BLE устройстве", ProviderState.UnsupportedProtocol);
             }
 
-            var service = servicesResult.Services[0];
-            using (service)
+            var batteryService = gattResult.Services[0];
+            var charResult = await batteryService.GetCharacteristicsForUuidAsync(GattCharacteristicUuids.BatteryLevel).AsTask(cancellationToken);
+            if (charResult.Status != GattCommunicationStatus.Success || charResult.Characteristics.Count == 0)
             {
-                var charResult = await service.GetCharacteristicsForUuidAsync(BatteryLevelCharUuid, BluetoothCacheMode.Uncached).AsTask(cancellationToken);
-                if (charResult.Status != GattCommunicationStatus.Success || charResult.Characteristics.Count == 0)
-                {
-                    return BatteryStatus.CreateUnknown($"Ошибка чтения GATT Characteristic: {charResult.Status}");
-                }
-
-                var characteristic = charResult.Characteristics[0];
-                var readResult = await characteristic.ReadValueAsync(BluetoothCacheMode.Uncached).AsTask(cancellationToken);
-
-                if (readResult.Status == GattCommunicationStatus.Success && readResult.Value != null)
-                {
-                    var reader = Windows.Storage.Streams.DataReader.FromBuffer(readResult.Value);
-                    if (reader.UnconsumedBufferLength >= 1)
-                    {
-                        byte rawPercent = reader.ReadByte();
-                        if (rawPercent <= 100)
-                        {
-                            return new BatteryStatus(
-                                IsPresent: true,
-                                Percent: rawPercent,
-                                IsCharging: false,
-                                IsFullyCharged: rawPercent == 100,
-                                IsSleeping: false,
-                                ConnectionMode: ConnectionMode.BluetoothLe,
-                                Timestamp: DateTimeOffset.UtcNow,
-                                Confidence: StatusConfidence.High,
-                                DiagnosticMessage: "Заряд считан через BLE GATT 0x2A19"
-                            );
-                        }
-                    }
-                }
+                Logger.Log("BLE_PROBE", $"BatteryLevel Characteristic query status: {charResult.Status}");
+                return BatteryStatus.CreateUnknown("Характеристика BatteryLevel (0x2A19) недоступна", ProviderState.UnsupportedProtocol);
             }
 
-            return BatteryStatus.CreateUnknown("Некорректный ответ BLE GATT характеристики");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
+            var batteryChar = charResult.Characteristics[0];
+            var readResult = await batteryChar.ReadValueAsync(BluetoothCacheMode.Uncached).AsTask(cancellationToken);
+            if (readResult.Status != GattCommunicationStatus.Success)
+            {
+                Logger.Log("BLE_PROBE", $"GATT ReadValueAsync status: {readResult.Status}");
+                return BatteryStatus.CreateUnknown($"Ошибка чтения GATT: {readResult.Status}", ProviderState.Timeout);
+            }
+
+            var reader = DataReader.FromBuffer(readResult.Value);
+            byte percent = reader.ReadByte();
+
+            if (percent > 100)
+            {
+                return BatteryStatus.CreateUnknown($"GATT вернул невалидное значение батареи: {percent}", ProviderState.InvalidFrame);
+            }
+
+            Logger.Log("BLE_SUCCESS", $"Successfully read battery over Bluetooth LE: {percent}%");
+
+            return new BatteryStatus(
+                IsPresent: true,
+                Percent: percent,
+                IsCharging: null,
+                IsFullyCharged: percent == 100,
+                IsSleeping: false,
+                ConnectionMode: ConnectionMode.BluetoothLe,
+                Timestamp: DateTimeOffset.UtcNow,
+                Confidence: StatusConfidence.High,
+                DiagnosticMessage: $"GATT BLE OK | Battery: {percent}%",
+                State: ProviderState.Connected,
+                ActiveTransport: "Bluetooth LE GATT (0x180F/0x2A19)"
+            );
         }
         catch (Exception ex)
         {
-            return BatteryStatus.CreateUnknown($"Ошибка BLE: {ex.Message}");
+            Logger.Log("BLE_EX", $"Exception during BLE read: {ex.Message}");
+            return BatteryStatus.CreateUnknown($"Ошибка BLE: {ex.Message}", ProviderState.Error);
         }
     }
 }

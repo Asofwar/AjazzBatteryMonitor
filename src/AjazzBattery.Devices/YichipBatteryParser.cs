@@ -9,45 +9,88 @@ public static class YichipBatteryParser
         byte[] rawResponse,
         DateTimeOffset timestamp)
     {
-        if (rawResponse == null || rawResponse.Length < 5)
+        if (rawResponse == null || rawResponse.Length < 4)
         {
-            return BatteryStatus.CreateUnknown("Некорректный размер ответа устройства");
+            return BatteryStatus.CreateUnknown("Некорректный размер ответа устройства (менее 4 байт)", ProviderState.InvalidFrame);
         }
 
-        // Opcode validation: expecting 0x20 or 0xF7 in response[1]
-        byte opcode = rawResponse[1];
-        if (opcode != 0x20 && opcode != 0xF7)
+        // Check for all-zero frame (telemetry not ready)
+        bool allZero = true;
+        for (int i = 0; i < Math.Min(rawResponse.Length, 8); i++)
         {
-            return BatteryStatus.CreateUnknown($"Неизвестный report opcode: 0x{opcode:X2}");
+            if (rawResponse[i] != 0) { allZero = false; break; }
         }
 
-        byte statusByte = rawResponse[3];
-        byte rawPercent = rawResponse[4];
-
-        bool isSleeping = (statusByte & 0x02) != 0;
-        bool isCharging = (statusByte & 0x01) != 0;
-        bool isFullyCharged = rawPercent == 0xFF;
-
-        int? percent = null;
-        StatusConfidence confidence = StatusConfidence.High;
-        string? diagMsg = null;
-
-        if (isFullyCharged)
+        if (allZero)
         {
-            percent = 100;
-            isCharging = true;
-            diagMsg = "Зарядка завершена / 100%";
+            return new BatteryStatus(
+                IsPresent: true,
+                Percent: null,
+                IsCharging: null,
+                IsFullyCharged: null,
+                IsSleeping: false,
+                ConnectionMode: device.ConnectionMode,
+                Timestamp: timestamp,
+                Confidence: StatusConfidence.Low,
+                DiagnosticMessage: "2.4 GHz телеметрия ещё не готова (нулевой кадр)",
+                State: ProviderState.TelemetryNotReady,
+                ActiveTransport: "HID 2.4G",
+                RawFrameHex: rawResponse
+            );
         }
-        else if (rawPercent <= 100)
+
+        // Hardware Frame Validation:
+        // frame[0] == 0x05 (Report ID 0x05)
+        // frame[1] == 0x00
+        // frame[2] == 0x00
+        byte reportId = rawResponse[0];
+        byte header1 = rawResponse[1];
+        byte header2 = rawResponse[2];
+
+        if (reportId != 0x05 || header1 != 0x00 || header2 != 0x00)
         {
-            percent = rawPercent;
-            diagMsg = isCharging ? "Заряжается" : (isSleeping ? "Мышь в режиме сна" : "Активна");
+            return new BatteryStatus(
+                IsPresent: true,
+                Percent: null,
+                IsCharging: null,
+                IsFullyCharged: null,
+                IsSleeping: false,
+                ConnectionMode: device.ConnectionMode,
+                Timestamp: timestamp,
+                Confidence: StatusConfidence.Low,
+                DiagnosticMessage: $"Отклонен невалидный кадр [0]=0x{reportId:X2} [1]=0x{header1:X2} [2]=0x{header2:X2}",
+                State: ProviderState.InvalidFrame,
+                ActiveTransport: "HID 2.4G",
+                RawFrameHex: rawResponse
+            );
         }
-        else
+
+        byte rawPercent = rawResponse[3];
+        if (rawPercent > 100)
         {
-            confidence = StatusConfidence.Low;
-            diagMsg = $"Значение батареи вне диапазонов: {rawPercent}";
+            return new BatteryStatus(
+                IsPresent: true,
+                Percent: null,
+                IsCharging: null,
+                IsFullyCharged: null,
+                IsSleeping: false,
+                ConnectionMode: device.ConnectionMode,
+                Timestamp: timestamp,
+                Confidence: StatusConfidence.Low,
+                DiagnosticMessage: $"Значение батареи вне диапазона 0..100: {rawPercent}",
+                State: ProviderState.InvalidFrame,
+                ActiveTransport: "HID 2.4G",
+                RawFrameHex: rawResponse
+            );
         }
+
+        int percent = rawPercent;
+        bool isCharging = (rawResponse.Length > 4 && (rawResponse[4] & 0x01) != 0) || percent == 100;
+        bool isFullyCharged = percent == 100;
+        bool isSleeping = rawResponse.Length > 7 && (rawResponse[7] & 0x02) != 0;
+
+        string frameHex = BitConverter.ToString(rawResponse, 0, Math.Min(8, rawResponse.Length)).Replace("-", " ");
+        string diagMsg = $"RECEIVER OK | VID:PID 0x{device.VendorId:X4}:0x{device.ProductId:X4} | Frame: {frameHex} | Battery: {percent}%";
 
         return new BatteryStatus(
             IsPresent: true,
@@ -57,8 +100,11 @@ public static class YichipBatteryParser
             IsSleeping: isSleeping,
             ConnectionMode: device.ConnectionMode,
             Timestamp: timestamp,
-            Confidence: confidence,
-            DiagnosticMessage: diagMsg
+            Confidence: StatusConfidence.High,
+            DiagnosticMessage: diagMsg,
+            State: ProviderState.Connected,
+            ActiveTransport: $"HID 2.4G (0x{device.VendorId:X4}:0x{device.ProductId:X4})",
+            RawFrameHex: rawResponse
         );
     }
 }

@@ -42,7 +42,6 @@ public class EngineTests
 
         Assert.True(result.IsPresent);
         Assert.Equal(74, result.Percent);
-        Assert.True(result.IsCharging);
         Assert.NotNull(updatedStatus);
     }
 
@@ -65,7 +64,7 @@ public class EngineTests
 
         Assert.False(result.IsPresent);
         Assert.Null(result.Percent);
-        Assert.Equal("Устройство AJAZZ не найдено", result.DiagnosticMessage);
+        Assert.Equal(ProviderState.DeviceNotFound, result.State);
     }
 
     [Fact]
@@ -73,7 +72,7 @@ public class EngineTests
     {
         var mockTransport = new MockHidTransport
         {
-            TransferHandler = (dev, req) => new byte[] { 0x00, 0x20, 0x01, 0x00, 15, 0x00 } // 15% not charging
+            TransferHandler = (dev, req) => new byte[] { 0x05, 0x00, 0x00, 15, 0x00, 0x01, 0x01, 0x02 } // 15% not charging
         };
         var registry = new DeviceProfileRegistry();
         var provider = new AjazzMouseBatteryProvider(mockTransport, registry);

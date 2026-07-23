@@ -2,9 +2,9 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path "$PSScriptRoot\.."
 $ArtifactsDir = "$RepoRoot\artifacts"
-$ExePath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.0.1.exe"
-$ZipPath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.0.1-portable.zip"
-$DiagZipPath = "$ArtifactsDir\AjazzBatteryMonitor-v1.0.1-diagnostics.zip"
+$ExePath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.0.2.exe"
+$ZipPath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.0.2-portable.zip"
+$DiagZipPath = "$ArtifactsDir\AjazzBatteryMonitor-v1.0.2-diagnostics.zip"
 
 if (-not (Test-Path $ExePath)) {
     Write-Error "Could not find $ExePath. Please run publish.ps1 first."
@@ -14,7 +14,6 @@ if (-not (Test-Path $ExePath)) {
 Write-Output "Packaging Portable ZIP..."
 if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
 Compress-Archive -Path $ExePath -DestinationPath $ZipPath -Force
-Copy-Item $ZipPath "$ArtifactsDir\AjazzBatteryMonitor-win-x64-portable.zip" -Force
 
 Write-Output "Packaging Diagnostics ZIP..."
 if (Test-Path $DiagZipPath) { Remove-Item -Force $DiagZipPath }

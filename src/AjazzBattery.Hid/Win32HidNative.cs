@@ -13,6 +13,9 @@ internal static class Win32HidNative
 
     public const int ERROR_SHARING_VIOLATION = 32;
 
+    public const uint DIGCF_PRESENT = 0x00000002;
+    public const uint DIGCF_DEVICEINTERFACE = 0x00000010;
+
     [StructLayout(LayoutKind.Sequential)]
     public struct HIDD_ATTRIBUTES
     {
@@ -44,8 +47,40 @@ internal static class Win32HidNative
         public ushort NumberFeatureDataIndices;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SP_DEVICE_INTERFACE_DATA
+    {
+        public int cbSize;
+        public Guid InterfaceClassGuid;
+        public int Flags;
+        public IntPtr Reserved;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    public struct SP_DEVICE_INTERFACE_DETAIL_DATA
+    {
+        public int cbSize;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string DevicePath;
+    }
+
     [DllImport("hid.dll", SetLastError = true)]
     public static extern void HidD_GetHidGuid(out Guid hidGuid);
+
+    [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern IntPtr SetupDiGetClassDevs(ref Guid ClassGuid, string? Enumerator, IntPtr hwndParent, uint Flags);
+
+    [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool SetupDiEnumDeviceInterfaces(IntPtr DeviceInfoSet, IntPtr DeviceInfoData, ref Guid InterfaceClassGuid, uint MemberIndex, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
+
+    [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool SetupDiGetDeviceInterfaceDetail(IntPtr DeviceInfoSet, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData, ref SP_DEVICE_INTERFACE_DETAIL_DATA DeviceInterfaceDetailData, int DeviceInterfaceDetailDataSize, out int RequiredSize, IntPtr DeviceInfoData);
+
+    [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool SetupDiGetDeviceInterfaceDetail(IntPtr DeviceInfoSet, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData, IntPtr DeviceInterfaceDetailData, int DeviceInterfaceDetailDataSize, out int RequiredSize, IntPtr DeviceInfoData);
+
+    [DllImport("setupapi.dll", SetLastError = true)]
+    public static extern bool SetupDiDestroyDeviceInfoList(IntPtr DeviceInfoSet);
 
     [DllImport("hid.dll", SetLastError = true)]
     public static extern bool HidD_GetAttributes(IntPtr hidDeviceObject, ref HIDD_ATTRIBUTES attributes);
@@ -64,6 +99,12 @@ internal static class Win32HidNative
 
     [DllImport("hid.dll", SetLastError = true)]
     public static extern bool HidD_SetFeature(IntPtr hidDeviceObject, byte[] reportBuffer, int reportBufferLength);
+
+    [DllImport("hid.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool HidD_GetProductString(IntPtr hidDeviceObject, byte[] buffer, int bufferLength);
+
+    [DllImport("hid.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool HidD_GetManufacturerString(IntPtr hidDeviceObject, byte[] buffer, int bufferLength);
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     public static extern IntPtr CreateFile(

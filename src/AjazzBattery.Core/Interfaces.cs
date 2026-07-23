@@ -15,6 +15,20 @@ public interface IHidTransport : IDisposable
 {
     Task<IReadOnlyList<DeviceDescriptor>> EnumerateDevicesAsync(CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<DeviceDescriptor>> EnumerateAllHidCollectionsAsync(CancellationToken cancellationToken);
+
+    Task<bool> SetFeatureReportAsync(
+        DeviceDescriptor device,
+        byte reportId,
+        byte[] data,
+        CancellationToken cancellationToken);
+
+    Task<byte[]> GetFeatureReportAsync(
+        DeviceDescriptor device,
+        byte reportId,
+        int expectedLength,
+        CancellationToken cancellationToken);
+
     Task<byte[]> TransferFeatureReportAsync(
         DeviceDescriptor device,
         byte reportId,

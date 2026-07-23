@@ -9,7 +9,14 @@ public sealed record DeviceDescriptor(
     ushort Usage,
     int InterfaceNumber,
     ConnectionMode ConnectionMode,
-    bool IsExperimental = false
+    ushort FeatureReportByteLength = 65,
+    ushort InputReportByteLength = 0,
+    ushort OutputReportByteLength = 0,
+    string Manufacturer = "",
+    string Product = "",
+    bool CanOpen = true,
+    int LastWin32Error = 0,
+    ConfirmationStatus ConfirmationStatus = ConfirmationStatus.Unverified
 );
 
 public sealed record BatteryStatus(
@@ -21,10 +28,13 @@ public sealed record BatteryStatus(
     ConnectionMode ConnectionMode,
     DateTimeOffset Timestamp,
     StatusConfidence Confidence,
-    string? DiagnosticMessage
+    string? DiagnosticMessage,
+    ProviderState State = ProviderState.DeviceNotFound,
+    string ActiveTransport = "None",
+    byte[]? RawFrameHex = null
 )
 {
-    public static BatteryStatus CreateUnknown(string? diagnosticMessage = null) =>
+    public static BatteryStatus CreateUnknown(string? diagnosticMessage = null, ProviderState state = ProviderState.DeviceNotFound) =>
         new(
             IsPresent: false,
             Percent: null,
@@ -34,7 +44,9 @@ public sealed record BatteryStatus(
             ConnectionMode: ConnectionMode.Unknown,
             Timestamp: DateTimeOffset.UtcNow,
             Confidence: StatusConfidence.Unknown,
-            DiagnosticMessage: diagnosticMessage ?? "Заряд неизвестен"
+            DiagnosticMessage: diagnosticMessage ?? "Заряд неизвестен",
+            State: state,
+            ActiveTransport: "None"
         );
 }
 
@@ -50,9 +62,10 @@ public sealed record AjazzDeviceProfile(
     ushort ProductId,
     ushort UsagePage,
     ushort? Usage,
-    byte ReportId,
-    byte[] BatteryRequest,
+    byte QueryReportId,
+    byte QueryOpcode,
+    byte ResponseReportId,
     BatteryResponseParser Parser,
     ConnectionMode ConnectionMode,
-    bool IsConfirmed = true
+    ConfirmationStatus ConfirmationStatus
 );

@@ -1,126 +1,232 @@
+using System.Text;
 using System.Windows.Forms;
 using AjazzBattery.Core;
+using AjazzBattery.Hid;
+using AjazzBattery.Bluetooth;
+using AjazzBattery.Devices;
 
 namespace AjazzBattery.App;
 
 public sealed class DiagnosticsForm : Form
 {
-    private readonly TextBox _textBox;
+    private readonly TextBox _txtDiagnostics;
+    private readonly Button _btnCopy;
+    private readonly Button _btnHidProbe;
+    private readonly Button _btnBleProbe;
+    private readonly Button _btnRefresh;
+    private readonly Button _btnOpenLog;
+    private readonly BatteryMonitorEngine _engine;
 
-    public DiagnosticsForm(BatteryStatus status, string providerId)
+    public DiagnosticsForm(BatteryMonitorEngine engine)
     {
-        Text = "AJAZZ Battery Monitor - Диагностика v1.0.1";
-        Size = new Size(550, 420);
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+
+        Text = "AJAZZ AJ179 APEX — Аппаратная диагностика (v1.0.2)";
+        Size = new Size(720, 560);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        BackColor = Color.FromArgb(30, 30, 46);
-        ForeColor = Color.FromArgb(205, 214, 244);
+        Icon = SystemIcons.Information;
 
-        _textBox = new TextBox
+        _txtDiagnostics = new TextBox
         {
             Multiline = true,
             ReadOnly = true,
             ScrollBars = ScrollBars.Vertical,
+            Font = new Font("Consolas", 9.5f),
             Dock = DockStyle.Top,
-            Height = 310,
-            BackColor = Color.FromArgb(24, 24, 37),
-            ForeColor = Color.FromArgb(166, 227, 161),
-            Font = new Font("Consolas", 9.5f, FontStyle.Regular)
+            Height = 440
         };
 
-        var btnPanel = new FlowLayoutPanel
+        var panelButtons = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 50,
-            FlowDirection = FlowDirection.RightToLeft,
-            Padding = new Padding(10)
+            Height = 60,
+            Padding = new Padding(10, 10, 10, 10),
+            FlowDirection = FlowDirection.LeftToRight
         };
 
-        var btnClose = new Button
-        {
-            Text = "Закрыть",
-            DialogResult = DialogResult.OK,
-            Width = 100,
-            Height = 30,
-            BackColor = Color.FromArgb(69, 71, 90),
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat
-        };
+        _btnCopy = new Button { Text = "Скопировать диагностику", Width = 170, Height = 32 };
+        _btnHidProbe = new Button { Text = "Выполнить HID probe", Width = 140, Height = 32 };
+        _btnBleProbe = new Button { Text = "Выполнить BLE probe", Width = 140, Height = 32 };
+        _btnRefresh = new Button { Text = "Обновить заряд", Width = 110, Height = 32 };
+        _btnOpenLog = new Button { Text = "Открыть лог", Width = 100, Height = 32 };
 
-        var btnCopy = new Button
-        {
-            Text = "Копировать",
-            Width = 110,
-            Height = 30,
-            BackColor = Color.FromArgb(49, 50, 68),
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat,
-            Margin = new Padding(0, 0, 10, 0)
-        };
-        btnCopy.Click += (s, e) =>
-        {
-            Clipboard.SetText(_textBox.Text);
-            MessageBox.Show("Диагностические данные скопированы в буфер обмена.", "Копирование", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        };
+        _btnCopy.Click += (s, e) => CopyDiagnostics();
+        _btnHidProbe.Click += async (s, e) => await RunHidProbeAsync();
+        _btnBleProbe.Click += async (s, e) => await RunBleProbeAsync();
+        _btnRefresh.Click += async (s, e) => await RefreshStatusAsync();
+        _btnOpenLog.Click += (s, e) => OpenLogFile();
 
-        var btnOpenLogs = new Button
-        {
-            Text = "Папка логов",
-            Width = 120,
-            Height = 30,
-            BackColor = Color.FromArgb(49, 50, 68),
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat,
-            Margin = new Padding(0, 0, 10, 0)
-        };
-        btnOpenLogs.Click += (s, e) =>
-        {
-            try
-            {
-                System.Diagnostics.Process.Start("explorer.exe", Logger.LogDirectoryPath);
-            }
-            catch { }
-        };
+        panelButtons.Controls.Add(_btnCopy);
+        panelButtons.Controls.Add(_btnHidProbe);
+        panelButtons.Controls.Add(_btnBleProbe);
+        panelButtons.Controls.Add(_btnRefresh);
+        panelButtons.Controls.Add(_btnOpenLog);
 
-        btnPanel.Controls.Add(btnClose);
-        btnPanel.Controls.Add(btnCopy);
-        btnPanel.Controls.Add(btnOpenLogs);
+        Controls.Add(_txtDiagnostics);
+        Controls.Add(panelButtons);
 
-        Controls.Add(_textBox);
-        Controls.Add(btnPanel);
-
-        PopulateDiagnostics(status, providerId);
+        LoadDiagnostics();
     }
 
-    private void PopulateDiagnostics(BatteryStatus status, string providerId)
+    private void LoadDiagnostics()
     {
-        string text = $@"==================================================
-  AJAZZ AJ179 APEX Battery Monitor Diagnostic Info
-==================================================
-Версия приложения:      1.0.1
-Версия .NET Runtime:    {Environment.Version}
-Операционная система:   {Environment.OSVersion}
-Архитектура процесса:   {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}
+        var sb = new StringBuilder();
+        var status = _engine.CurrentStatus;
 
---- Состояние Монитора ---
-Активный провайдер:     {providerId}
-Устройство подключено:  {status.IsPresent}
-Процент заряда:         {(status.Percent.HasValue ? $"{status.Percent}%" : "Заряд неизвестен")}
-Состояние зарядки:      {status.IsCharging}
-Полный заряд:           {status.IsFullyCharged}
-Режим сна:              {status.IsSleeping}
-Режим подключения:      {status.ConnectionMode}
-Достоверность данных:   {status.Confidence}
-Время обновления:       {status.Timestamp:yyyy-MM-dd HH:mm:ss UTC}
-Сообщение диагностики:  {status.DiagnosticMessage ?? "Опрос выполняется без ошибок."}
+        sb.AppendLine("=========================================================");
+        sb.AppendLine("  AJAZZ AJ179 APEX Battery Monitor — Диагностика v1.0.2  ");
+        sb.AppendLine("=========================================================");
+        sb.AppendLine($"Время отчёта: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"ОС:           {Environment.OSVersion}");
+        sb.AppendLine($"64-bit OS:    {Environment.Is64BitOperatingSystem}");
+        sb.AppendLine($"Лог-файл:     {Logger.LogFilePath}");
+        sb.AppendLine();
 
---- Пути к файлам ---
-Лог запуска:            {Logger.LogFilePath}
-Папка хранилища:        {Logger.LogDirectoryPath}
-==================================================";
+        sb.AppendLine("--- ТЕКУЩИЙ СТАТУС ТЕЛЕМЕТРИИ ---");
+        sb.AppendLine($"Активный транспорт: {status.ActiveTransport}");
+        sb.AppendLine($"Состояние:          {status.State}");
+        sb.AppendLine($"Процент заряда:     {(status.Percent.HasValue ? $"{status.Percent}%" : "Неизвестен")}");
+        sb.AppendLine($"Зарядка:            {(status.IsCharging == true ? "Да" : "Нет")}");
+        sb.AppendLine($"Режим сна:          {(status.IsSleeping ? "Да" : "Нет")}");
+        sb.AppendLine($"Достоверность:      {status.Confidence}");
+        sb.AppendLine($"Диагностика:        {status.DiagnosticMessage}");
 
-        _textBox.Text = text;
+        if (status.RawFrameHex != null && status.RawFrameHex.Length > 0)
+        {
+            string hexStr = BitConverter.ToString(status.RawFrameHex, 0, Math.Min(16, status.RawFrameHex.Length)).Replace("-", " ");
+            sb.AppendLine($"Сырой кадр 0x05:    {hexStr}");
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("--- БЛУТУЗ (Bluetooth LE GATT) ---");
+        sb.AppendLine("Поддерживаемый Service UUID: 0x180F (Battery Service)");
+        sb.AppendLine("Поддерживаемый Char UUID:    0x2A19 (Battery Level)");
+        sb.AppendLine("Статус проверки BLE:        (нажмите 'Выполнить BLE probe' для теста)");
+        sb.AppendLine();
+
+        sb.AppendLine("--- HID (2.4 GHz Receiver / Charging Dock) ---");
+        sb.AppendLine("Поддерживаемые VIDs:  0x3151, 0x248A, 0x249A");
+        sb.AppendLine("Поддерживаемые PIDs:  0x5007 (Dock), 0x402D (2.4G Receiver), 0x502D (USB Cable), 0x5008 (Alt 2.4G)");
+        sb.AppendLine("Vendor Collection:    UsagePage 0xFFFF / Usage 0x0002");
+        sb.AppendLine("Протокол опроса:      SET_FEATURE 0x00 [0xF7] -> Delay 30ms -> GET_FEATURE 0x05");
+        sb.AppendLine("Статус проверки HID:        (нажмите 'Выполнить HID probe' для теста)");
+        sb.AppendLine("=========================================================");
+
+        _txtDiagnostics.Text = sb.ToString();
+    }
+
+    private async Task RunHidProbeAsync()
+    {
+        _txtDiagnostics.Text = "Выполняется проверка HID 2.4 GHz ресивера и док-станции...\r\n";
+        using var transport = new Win32HidTransport();
+        var registry = new DeviceProfileRegistry();
+        var provider = new AjazzMouseBatteryProvider(transport, registry);
+
+        var collections = await transport.EnumerateAllHidCollectionsAsync(CancellationToken.None);
+        var sb = new StringBuilder();
+        sb.AppendLine("=========================================================");
+        sb.AppendLine("  РЕЗУЛЬТАТЫ HID PROBE (0xF7 + 0x05)                     ");
+        sb.AppendLine("=========================================================");
+        sb.AppendLine($"Найдено коллекций в PnP: {collections.Count}\r\n");
+
+        if (collections.Count == 0)
+        {
+            sb.AppendLine("[-] 2.4 GHz ресивер или док-станция не подключены к USB порту.");
+            sb.AppendLine("    Проверьте, что 2.4G USB-донгл вставлен в USB порт компьютера.");
+        }
+        else
+        {
+            int idx = 1;
+            foreach (var col in collections)
+            {
+                sb.AppendLine($"Коллекция #{idx++}:");
+                sb.AppendLine($"  Модель:     {col.ModelName}");
+                sb.AppendLine($"  VID:PID:    0x{col.VendorId:X4}:0x{col.ProductId:X4}");
+                sb.AppendLine($"  UsagePage:  0x{col.UsagePage:X4}");
+                sb.AppendLine($"  Usage:      0x{col.Usage:X4}");
+                sb.AppendLine($"  FeatureLen: {col.FeatureReportByteLength}");
+                sb.AppendLine($"  DevicePath: {col.DevicePath}");
+
+                if (col.UsagePage == 0x0001 && col.Usage == 0x0002)
+                {
+                    sb.AppendLine("  Результат:  Пропущена — стандартная коллекция мыши (0x0001/0x0002)\r\n");
+                    continue;
+                }
+
+                var status = await provider.ReadStatusAsync(col, CancellationToken.None);
+                sb.AppendLine($"  Состояние:  {status.State}");
+                sb.AppendLine($"  Диагностика:{status.DiagnosticMessage}");
+                if (status.Percent.HasValue)
+                {
+                    sb.AppendLine($"  >>> УСПЕХ! Реальный процент заряда: {status.Percent}% <<<");
+                }
+                sb.AppendLine();
+            }
+        }
+
+        _txtDiagnostics.Text = sb.ToString();
+    }
+
+    private async Task RunBleProbeAsync()
+    {
+        _txtDiagnostics.Text = "Выполняется проверка Bluetooth LE GATT...\r\n";
+        var bleProvider = new BleBatteryProvider();
+        var dummyDesc = new DeviceDescriptor(
+            DevicePath: "BLE_DIAG_PROBE",
+            ModelName: "AJAZZ AJ179 APEX",
+            VendorId: 0x3151,
+            ProductId: 0x5007,
+            UsagePage: 0xFFFF,
+            Usage: 0x0002,
+            InterfaceNumber: 0,
+            ConnectionMode: ConnectionMode.BluetoothLe
+        );
+
+        var status = await bleProvider.ReadStatusAsync(dummyDesc, CancellationToken.None);
+        var sb = new StringBuilder();
+        sb.AppendLine("=========================================================");
+        sb.AppendLine("  РЕЗУЛЬТАТЫ BLE PROBE (GATT 0x180F / 0x2A19)            ");
+        sb.AppendLine("=========================================================");
+        sb.AppendLine($"Состояние BLE: {status.State}");
+        sb.AppendLine($"Диагностика:   {status.DiagnosticMessage}");
+        if (status.Percent.HasValue)
+        {
+            sb.AppendLine($">>> УСПЕХ! Реальный процент заряда по BLE: {status.Percent}% <<<");
+        }
+        else
+        {
+            sb.AppendLine("\r\nРекомендация: Если мышь используется по 2.4 GHz ресиверу, убедитесь, что USB-донгл вставлен в ПК.");
+        }
+
+        _txtDiagnostics.Text = sb.ToString();
+    }
+
+    private async Task RefreshStatusAsync()
+    {
+        _txtDiagnostics.Text = "Обновление статуса батареи...";
+        await _engine.PollOnceAsync(CancellationToken.None);
+        LoadDiagnostics();
+    }
+
+    private void CopyDiagnostics()
+    {
+        Clipboard.SetText(_txtDiagnostics.Text);
+        MessageBox.Show("Диагностические данные успешно скопированы в буфер обмена.", "Диагностика", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private void OpenLogFile()
+    {
+        string logPath = Logger.LogFilePath;
+        if (File.Exists(logPath))
+        {
+            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{logPath}\"");
+        }
+        else
+        {
+            MessageBox.Show($"Лог-файл еще не создан:\n{logPath}", "Лог", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
     }
 }

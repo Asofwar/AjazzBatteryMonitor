@@ -33,25 +33,68 @@ public sealed class BatteryMonitorEngine
     {
         try
         {
-            var devices = await _transport.EnumerateDevicesAsync(cancellationToken);
-            if (devices.Count == 0)
+            // Step 1: Try BLE provider first if available
+            var bleProvider = _providers.FirstOrDefault(p => p.ProviderId == "AjazzBleBatteryProvider");
+            if (bleProvider != null)
             {
-                var unknownStatus = BatteryStatus.CreateUnknown("Устройство AJAZZ не найдено");
-                UpdateStatus(unknownStatus);
-                return unknownStatus;
+                var bleDummyDescriptor = new DeviceDescriptor(
+                    DevicePath: "BLE_TARGET",
+                    ModelName: "AJAZZ AJ179 APEX",
+                    VendorId: 0x3151,
+                    ProductId: 0x5007,
+                    UsagePage: 0xFFFF,
+                    Usage: 0x0002,
+                    InterfaceNumber: 0,
+                    ConnectionMode: ConnectionMode.BluetoothLe
+                );
+
+                var bleStatus = await bleProvider.ReadStatusAsync(bleDummyDescriptor, cancellationToken);
+                if (bleStatus.IsPresent && bleStatus.Percent.HasValue)
+                {
+                    _consecutiveErrors = 0;
+                    _lastSuccessfulRead = bleStatus.Timestamp;
+                    ProcessNotifications(bleStatus, "AJAZZ AJ179 APEX");
+                    UpdateStatus(bleStatus);
+                    return bleStatus;
+                }
             }
 
-            foreach (var device in devices)
+            // Step 2: Enumerate HID collections
+            var collections = await _transport.EnumerateAllHidCollectionsAsync(cancellationToken);
+            if (collections.Count == 0)
             {
-                var provider = _providers.FirstOrDefault(p => p.CanHandle(device));
-                if (provider == null) continue;
+                var noDeviceStatus = BatteryStatus.CreateUnknown("Устройство или ресивер AJAZZ не найдены в PnP", ProviderState.DeviceNotFound);
+                UpdateStatus(noDeviceStatus);
+                return noDeviceStatus;
+            }
 
-                var status = await provider.ReadStatusAsync(device, cancellationToken);
+            var hidProvider = _providers.FirstOrDefault(p => p.ProviderId == "AjazzYichipHardwareProvider")
+                           ?? _providers.FirstOrDefault(p => p.CanHandle(collections[0]));
+
+            if (hidProvider == null)
+            {
+                var noProviderStatus = BatteryStatus.CreateUnknown("Подходящий HID провайдер не найден", ProviderState.UnsupportedProtocol);
+                UpdateStatus(noProviderStatus);
+                return noProviderStatus;
+            }
+
+            // Prioritize Vendor-defined Control Collections (UsagePage 0xFFFF / 0xFF00)
+            var sortedCollections = collections
+                .OrderByDescending(c => c.UsagePage >= 0xFF00 ? 10 : 0)
+                .ThenByDescending(c => c.ConfirmationStatus == ConfirmationStatus.ConfirmedOnDevice ? 5 : 0)
+                .ToList();
+
+            foreach (var collection in sortedCollections)
+            {
+                // Skip standard mouse input collection (0x0001 / 0x0002)
+                if (collection.UsagePage == 0x0001 && collection.Usage == 0x0002) continue;
+
+                var status = await hidProvider.ReadStatusAsync(collection, cancellationToken);
                 if (status.IsPresent && status.Percent.HasValue)
                 {
                     _consecutiveErrors = 0;
                     _lastSuccessfulRead = status.Timestamp;
-                    ProcessNotifications(status, device.ModelName);
+                    ProcessNotifications(status, collection.ModelName);
                     UpdateStatus(status);
                     return status;
                 }
@@ -63,24 +106,26 @@ public sealed class BatteryMonitorEngine
                 }
             }
 
+            // Step 3: Handle Fallback if no valid percentage was obtained
             _consecutiveErrors++;
             var isStale = (DateTimeOffset.UtcNow - _lastSuccessfulRead) > TimeSpan.FromMinutes(10);
-            var fallbackConfidence = isStale ? StatusConfidence.Stale : StatusConfidence.Low;
 
-            var result = new BatteryStatus(
-                IsPresent: _lastStatus.IsPresent,
+            var fallbackStatus = new BatteryStatus(
+                IsPresent: true,
                 Percent: isStale ? null : _lastStatus.Percent,
                 IsCharging: _lastStatus.IsCharging,
                 IsFullyCharged: _lastStatus.IsFullyCharged,
                 IsSleeping: _lastStatus.IsSleeping,
-                ConnectionMode: _lastStatus.ConnectionMode,
+                ConnectionMode: sortedCollections[0].ConnectionMode,
                 Timestamp: DateTimeOffset.UtcNow,
-                Confidence: fallbackConfidence,
-                DiagnosticMessage: isStale ? "Данные устарели" : "Не удалось обновить статус"
+                Confidence: isStale ? StatusConfidence.Stale : StatusConfidence.Low,
+                DiagnosticMessage: isStale ? "Данные батареи устарели (>10 мин без ответа)" : $"Ресивер найден (0x{sortedCollections[0].VendorId:X4}:0x{sortedCollections[0].ProductId:X4}), но кадр 0x05 не содержит заряд",
+                State: ProviderState.TelemetryNotReady,
+                ActiveTransport: $"HID (0x{sortedCollections[0].VendorId:X4}:0x{sortedCollections[0].ProductId:X4})"
             );
 
-            UpdateStatus(result);
-            return result;
+            UpdateStatus(fallbackStatus);
+            return fallbackStatus;
         }
         catch (OperationCanceledException)
         {
@@ -89,9 +134,9 @@ public sealed class BatteryMonitorEngine
         catch (Exception ex)
         {
             _consecutiveErrors++;
-            var errorStatus = BatteryStatus.CreateUnknown($"Ошибка опроса: {ex.Message}");
-            UpdateStatus(errorStatus);
-            return errorStatus;
+            var errStatus = BatteryStatus.CreateUnknown($"Ошибка опроса: {ex.Message}", ProviderState.Error);
+            UpdateStatus(errStatus);
+            return errStatus;
         }
     }
 

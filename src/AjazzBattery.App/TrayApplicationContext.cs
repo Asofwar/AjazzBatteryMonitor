@@ -98,7 +98,7 @@ public sealed class TrayApplicationContext : ApplicationContext
 
         var diagItem = new ToolStripMenuItem("Диагностика", null, (s, e) =>
         {
-            var diagForm = new DiagnosticsForm(_engine.CurrentStatus, "BleOrHidProvider");
+            var diagForm = new DiagnosticsForm(_engine);
             diagForm.ShowDialog();
         });
 
