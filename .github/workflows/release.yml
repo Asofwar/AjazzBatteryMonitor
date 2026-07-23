@@ -40,6 +40,25 @@ jobs:
           powershell -ExecutionPolicy Bypass -File .\scripts\generate-sbom.ps1
           powershell -ExecutionPolicy Bypass -File .\scripts\generate-checksums.ps1
           powershell -ExecutionPolicy Bypass -File .\scripts\verify-release.ps1
+      - name: Sign release executables
+        if: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $certificatePath = Join-Path $env:RUNNER_TEMP 'ajazz-release-signing.pfx'
+          try {
+            [System.IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
+            $signTool = Get-Command signtool.exe -ErrorAction Stop
+            Get-ChildItem artifacts -Filter '*.exe' | ForEach-Object {
+              & $signTool.Source sign /fd SHA256 /f $certificatePath /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td SHA256 $_.FullName
+              if ($LASTEXITCODE -ne 0) { throw "Signing failed for $($_.Name)." }
+            }
+          }
+          finally {
+            Remove-Item -LiteralPath $certificatePath -Force -ErrorAction SilentlyContinue
+          }
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
