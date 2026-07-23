@@ -5,7 +5,7 @@
 ### 1. Aj179PStat
 - **Repository**: `https://github.com/GetTheNya/Aj179PStat`
 - **Tech Stack**: C# / Windows Desktop (.NET)
-- **License**: Open-Source / MIT
+- **License**: no root license file was present in the audited upstream commit; reuse permission is `NOT_PROVEN`
 - **Key Features**: Windows Tray icon, PID `0x402D` HID polling, simple percentage display.
 - **Strengths**: Lightweight Windows tray foundation.
 - **Weaknesses**: Single hardcoded PID (`0x402D`), lacks multi-PID support, missing robust error/sleep fallback, no tests, unmaintained.
@@ -13,7 +13,7 @@
 ### 2. Nibble
 - **Repository**: `https://github.com/mahammadismayilov/nibble`
 - **Tech Stack**: JavaScript / WebHID API
-- **License**: MIT
+- **License**: GPL-3.0-or-later
 - **Key Features**: Browser-based configuration for AJAZZ mice.
 - **Strengths**: Reverse-engineered protocol definitions for various AJAZZ models.
 - **Weaknesses**: Requires browser tab to be open; cannot run natively in Windows system tray or handle background sleep recovery seamlessly.
@@ -39,7 +39,7 @@
 ## Architectural Decision & Base Choice
 
 ### Selected Approach: Custom C# .NET 8 Modular Architecture (`AjazzBattery.*`)
-We adopt the tray and protocol concepts from **Aj179PStat** and protocol specifications from **Nibble** / **AJAZZ Control Center**, while re-architecting from scratch into a clean, modern, testable .NET 8 solution:
+The project evaluates tray and protocol concepts from **Aj179PStat** and protocol facts described by **Nibble** / **AJAZZ Control Center**. This document is an architectural comparison, not a claim of permission to copy source code. Any public distribution requires the provenance and license gate in `docs/reviews/license-audit.md` to be resolved.
 
 1. **`AjazzBattery.Core`**: Domain models (`BatteryStatus`, `DeviceDescriptor`, `AjazzDeviceProfile`), interfaces (`IMouseBatteryProvider`).
 2. **`AjazzBattery.Hid`**: Windows Win32 HID API wrapper + Bluetooth GATT provider with safe timeout-bounded async I/O.

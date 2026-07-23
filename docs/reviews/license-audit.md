@@ -3,6 +3,7 @@
 ## Evidence reviewed
 
 - `THIRD-PARTY-NOTICES.md` identifies `ajazz-control-center` as a GPL-3.0 protocol reference.
+- The additional sources listed in `docs/upstream-comparison.md` were audited on 2026-07-24: Nibble commit `26568a9efe4003abc58b80e2739062d069cf1275` contains GPL-3.0-or-later terms; Aj179PStat commit `6c3be85598cd5f728530d729f7e4918a0b7b53f0` has no root license file.
 - No root `LICENSE` file or explicit permission from the upstream copyright holder is present.
 - The local repository history does not establish whether implementation code was independently written from protocol facts or derived from GPL-licensed source.
 - A source-structure comparison was performed against upstream commit `03a29f7a90dd32057ca7cd0d6e6fa8f13d5400f3` on 2026-07-24. The upstream is a C++/Qt multi-device control centre; this repository is a C#/.NET tray monitor with distinct project structure and APIs. Both describe the same public hardware facts: the HID status poll, report identifier and response layout.
