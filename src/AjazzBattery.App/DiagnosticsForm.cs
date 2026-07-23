@@ -22,7 +22,7 @@ public sealed class DiagnosticsForm : Form
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
 
-        Text = "AJAZZ AJ179 APEX — Аппаратная диагностика (v1.0.2)";
+        Text = $"AJAZZ AJ179 APEX — Аппаратная диагностика (v{AppVersion.Display})";
         Size = new Size(720, 560);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -78,7 +78,7 @@ public sealed class DiagnosticsForm : Form
         var status = _engine.CurrentStatus;
 
         sb.AppendLine("=========================================================");
-        sb.AppendLine("  AJAZZ AJ179 APEX Battery Monitor — Диагностика v1.1.3  ");
+        sb.AppendLine($"  AJAZZ AJ179 APEX Battery Monitor — Диагностика v{AppVersion.Display}  ");
         sb.AppendLine("=========================================================");
         sb.AppendLine($"ОС:           {Environment.OSVersion}");
         sb.AppendLine($"64-bit OS:    {Environment.Is64BitOperatingSystem}");
@@ -157,7 +157,7 @@ public sealed class DiagnosticsForm : Form
                 sb.AppendLine($"  UsagePage:  0x{col.UsagePage:X4}");
                 sb.AppendLine($"  Usage:      0x{col.Usage:X4}");
                 sb.AppendLine($"  FeatureLen: {col.FeatureReportByteLength}");
-                sb.AppendLine($"  DevicePath: {col.DevicePath}");
+                sb.AppendLine($"  DevicePath: {Logger.RedactSensitiveData(col.DevicePath)}");
 
                 if (col.UsagePage == 0x0001 && col.Usage == 0x0002)
                 {

@@ -6,6 +6,8 @@ public sealed class BatteryNotificationService
     private readonly INotificationTransport _fallbackTransport;
     private readonly BatteryNotificationSettings _settings;
     private readonly BatteryNotificationState _state;
+    private readonly Action<BatteryNotificationSettings, BatteryNotificationState>? _persist;
+    private readonly SemaphoreSlim _gate = new(1, 1);
 
     public BatteryNotificationSettings Settings => _settings;
     public BatteryNotificationState State => _state;
@@ -15,17 +17,37 @@ public sealed class BatteryNotificationService
         INotificationTransport primaryTransport,
         INotificationTransport fallbackTransport,
         BatteryNotificationSettings? settings = null,
-        BatteryNotificationState? state = null)
+        BatteryNotificationState? state = null,
+        Action<BatteryNotificationSettings, BatteryNotificationState>? persist = null)
     {
         _primaryTransport = primaryTransport ?? throw new ArgumentNullException(nameof(primaryTransport));
         _fallbackTransport = fallbackTransport ?? throw new ArgumentNullException(nameof(fallbackTransport));
         _settings = settings ?? new BatteryNotificationSettings();
         _state = state ?? new BatteryNotificationState();
+        _persist = persist;
 
         _settings.ValidateAndSanitize();
     }
 
     public async Task ProcessBatteryUpdateAsync(
+        BatteryStatus status,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await ProcessBatteryUpdateCoreAsync(status, cancellationToken);
+        }
+        finally
+        {
+            Persist();
+            _gate.Release();
+        }
+    }
+
+    public void Persist() => _persist?.Invoke(_settings, _state);
+
+    private async Task ProcessBatteryUpdateCoreAsync(
         BatteryStatus status,
         CancellationToken cancellationToken = default)
     {

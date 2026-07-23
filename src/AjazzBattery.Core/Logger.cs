@@ -18,6 +18,8 @@ public static class Logger
 
     private static readonly Regex MacPattern = new(@"([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})", RegexOptions.Compiled);
     private static readonly Regex BleIdPattern = new(@"BluetoothLE#BluetoothLE[a-zA-Z0-9:\-\\\?\#]+", RegexOptions.Compiled);
+    private static readonly Regex HidPathPattern = new(@"\\\\\?\\HID#[^\s]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex UserPathPattern = new(@"[A-Za-z]:\\Users\\[^\\\s]+(?:\\[^\s]*)?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     static Logger()
     {
@@ -33,6 +35,8 @@ public static class Logger
         if (string.IsNullOrEmpty(text)) return text;
         text = BleIdPattern.Replace(text, "[id redacted]");
         text = MacPattern.Replace(text, "[mac redacted]");
+        text = HidPathPattern.Replace(text, "[hid path redacted]");
+        text = UserPathPattern.Replace(text, "[local path redacted]");
         return text;
     }
 
@@ -57,11 +61,13 @@ public static class Logger
             try
             {
                 string safeMsg = RedactSensitiveData(ex.Message);
-                string details = $"[{DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UTC] [ERROR] [{stage}] Exception: {ex.GetType().FullName}: {safeMsg}{Environment.NewLine}StackTrace:{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}";
+                string safeStackTrace = RedactSensitiveData(ex.StackTrace ?? string.Empty);
+                string details = $"[{DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UTC] [ERROR] [{stage}] Exception: {ex.GetType().FullName}: {safeMsg}{Environment.NewLine}StackTrace:{Environment.NewLine}{safeStackTrace}{Environment.NewLine}";
                 if (ex.InnerException != null)
                 {
                     string safeInner = RedactSensitiveData(ex.InnerException.Message);
-                    details += $"InnerException: {ex.InnerException.GetType().FullName}: {safeInner}{Environment.NewLine}{ex.InnerException.StackTrace}{Environment.NewLine}";
+                    string safeInnerStackTrace = RedactSensitiveData(ex.InnerException.StackTrace ?? string.Empty);
+                    details += $"InnerException: {ex.InnerException.GetType().FullName}: {safeInner}{Environment.NewLine}{safeInnerStackTrace}{Environment.NewLine}";
                 }
                 File.AppendAllText(StartupLogPath, details);
             }

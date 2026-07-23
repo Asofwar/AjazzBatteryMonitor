@@ -70,7 +70,10 @@ public sealed class DeviceProfileRegistry
     {
         return Profiles.FirstOrDefault(p =>
             p.VendorId == descriptor.VendorId &&
-            p.ProductId == descriptor.ProductId
+            p.ProductId == descriptor.ProductId &&
+            p.UsagePage == descriptor.UsagePage &&
+            p.Usage == descriptor.Usage &&
+            p.ConnectionMode == descriptor.ConnectionMode
         );
     }
 }

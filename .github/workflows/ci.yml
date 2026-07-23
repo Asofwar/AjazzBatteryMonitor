@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore locked dependencies
+        run: dotnet restore AjazzBattery.sln --locked-mode
+      - name: Build
+        run: dotnet build AjazzBattery.sln --configuration Release --no-restore
+      - name: Test non-hardware suites
+        run: dotnet test AjazzBattery.sln --configuration Release --no-build --filter "Category!=Hardware" --collect:"XPlat Code Coverage" --results-directory TestResults
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: error

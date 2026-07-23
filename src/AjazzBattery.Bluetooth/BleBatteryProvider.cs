@@ -90,6 +90,11 @@ public sealed class BleBatteryProvider : IMouseBatteryProvider
                 return BatteryStatus.CreateUnknown($"Ошибка чтения GATT: {readResult.Status}", ProviderState.Timeout);
             }
 
+            if (readResult.Value is null || readResult.Value.Length < 1)
+            {
+                return BatteryStatus.CreateUnknown("GATT returned an empty BatteryLevel value", ProviderState.InvalidFrame);
+            }
+
             var reader = DataReader.FromBuffer(readResult.Value);
             byte percent = reader.ReadByte();
 

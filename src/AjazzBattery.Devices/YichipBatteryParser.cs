@@ -9,7 +9,7 @@ public static class YichipBatteryParser
         byte[] rawResponse,
         DateTimeOffset timestamp)
     {
-        if (rawResponse == null || rawResponse.Length < 4)
+        if (rawResponse == null || rawResponse.Length < 8)
         {
             return BatteryStatus.CreateUnknown("Некорректный размер ответа устройства (менее 4 байт)", ProviderState.InvalidFrame);
         }

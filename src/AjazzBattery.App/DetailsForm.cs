@@ -26,7 +26,7 @@ public sealed class DetailsForm : Form
         _autoStartManager = autoStartManager;
         _storage = storage;
 
-        Text = "AJAZZ AJ179 APEX — Монитор батареи v1.0.2";
+        Text = $"AJAZZ AJ179 APEX — Монитор батареи v{AppVersion.Display}";
         Size = new Size(580, 460);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;

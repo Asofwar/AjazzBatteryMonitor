@@ -32,7 +32,7 @@ internal static class Program
         // 1. Immediate Startup Logging BEFORE any UI, HID, or BLE initialization
         Logger.Log("STARTUP", "Process started");
         string exePath = Environment.ProcessPath ?? AppContext.BaseDirectory;
-        Logger.Log("STARTUP", "Application version: 1.1.3");
+        Logger.Log("STARTUP", $"Application version: {typeof(Program).Assembly.GetName().Version}");
         Logger.Log("STARTUP", $"Executable path: {exePath}");
         Logger.Log("STARTUP", $"Runtime version: {Environment.Version}");
         Logger.Log("STARTUP", $"OS version: {Environment.OSVersion}");

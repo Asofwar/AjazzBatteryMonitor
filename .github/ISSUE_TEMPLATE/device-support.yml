@@ -1,0 +1,18 @@
+name: Device support request
+description: Request support for a device model
+body:
+  - type: markdown
+    attributes:
+      value: Do not publish Bluetooth MAC addresses, serial numbers, full BLE IDs or complete HID paths.
+  - type: input
+    id: model
+    attributes:
+      label: Device model
+    validations:
+      required: true
+  - type: textarea
+    id: transport
+    attributes:
+      label: Connection and observed battery behavior
+    validations:
+      required: true

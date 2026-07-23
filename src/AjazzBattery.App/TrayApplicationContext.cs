@@ -25,11 +25,14 @@ public sealed class TrayApplicationContext : ApplicationContext
     private readonly CancellationTokenSource _pollCts;
     private MainForm? _mainForm;
     private Icon? _currentIcon;
+    private System.Windows.Forms.Timer? _smokeTestTimer;
     private readonly bool _isSmokeTest;
     private readonly bool _isSmokeTestUi;
+    private readonly int _uiThreadId;
 
     public TrayApplicationContext(bool isSmokeTest = false, bool isSmokeTestUi = false, int? mockPercent = null)
     {
+        _uiThreadId = Environment.CurrentManagedThreadId;
         _isSmokeTest = isSmokeTest;
         _isSmokeTestUi = isSmokeTestUi;
 
@@ -59,7 +62,12 @@ public sealed class TrayApplicationContext : ApplicationContext
 
         var primaryTransport = new WindowsToastNotificationTransport();
         var fallbackTransport = new NotifyIconBalloonNotificationTransport(_notifyIcon);
-        _notificationService = new BatteryNotificationService(primaryTransport, fallbackTransport);
+        _notificationService = new BatteryNotificationService(
+            primaryTransport,
+            fallbackTransport,
+            _storage.LoadNotificationSettings(),
+            _storage.LoadNotificationState(),
+            _storage.SaveNotificationState);
 
         _engine = new BatteryMonitorEngine(
             new IMouseBatteryProvider[] { bleProvider, hidProvider },
@@ -81,14 +89,14 @@ public sealed class TrayApplicationContext : ApplicationContext
         if (_isSmokeTest)
         {
             Logger.Log("SMOKE", "Smoke test mode active - scheduling clean exit in 10s...");
-            var timer = new System.Windows.Forms.Timer { Interval = 10000 };
-            timer.Tick += (s, e) =>
+            _smokeTestTimer = new System.Windows.Forms.Timer { Interval = 10000 };
+            _smokeTestTimer.Tick += (s, e) =>
             {
-                timer.Stop();
+                _smokeTestTimer.Stop();
                 Logger.Log("SMOKE", "Smoke test completed successfully");
                 ExitApplication();
             };
-            timer.Start();
+            _smokeTestTimer.Start();
         }
         else if (_isSmokeTestUi)
         {
@@ -160,6 +168,20 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void OnStatusUpdated(BatteryStatus status)
     {
+        if (Environment.CurrentManagedThreadId != _uiThreadId)
+        {
+            var menu = _notifyIcon.ContextMenuStrip;
+            if (menu?.IsHandleCreated == true)
+            {
+                menu.BeginInvoke(() => OnStatusUpdated(status));
+            }
+            else
+            {
+                Logger.Log("STATUS_UPDATE", "Deferred tray update because the UI handle is not ready.");
+            }
+            return;
+        }
+
         try
         {
             UpdateTrayIconInternal(status);
@@ -242,6 +264,9 @@ public sealed class TrayApplicationContext : ApplicationContext
         SystemEvents.SessionSwitch -= OnSessionSwitch;
 
         _pollCts.Cancel();
+        _smokeTestTimer?.Stop();
+        _smokeTestTimer?.Dispose();
+        _smokeTestTimer = null;
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
         _currentIcon?.Dispose();

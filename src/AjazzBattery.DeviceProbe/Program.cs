@@ -56,7 +56,7 @@ internal static class Program
     private static void PrintUsage()
     {
         Console.WriteLine("==================================================");
-        Console.WriteLine("  AjazzBattery.DeviceProbe CLI Diagnostics v1.0.2 ");
+        Console.WriteLine($"  AjazzBattery.DeviceProbe CLI Diagnostics v{AppVersion.Display} ");
         Console.WriteLine("==================================================");
         Console.WriteLine("Команды:");
         Console.WriteLine("  list              - Поиск и перечисление всех HID коллекций");
@@ -239,7 +239,7 @@ internal static class Program
         IMouseBatteryProvider bleProvider,
         IMouseBatteryProvider hidProvider)
     {
-        Console.WriteLine("[+] Запуск монитора в реальном времени (v1.0.2). Нажмите Ctrl+C для выхода.");
+        Console.WriteLine($"[+] Запуск монитора в реальном времени (v{AppVersion.Display}). Нажмите Ctrl+C для выхода.");
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (s, e) => { e.Cancel = true; cts.Cancel(); };
 
@@ -254,7 +254,7 @@ internal static class Program
                 var status = await hidProvider.ReadStatusAsync(col, cts.Token);
                 if (status.IsPresent && status.Percent.HasValue)
                 {
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Заряд: {status.Percent}% | Зарядка: {status.IsCharging} | Сон: {status.IsSleeping} | [{col.DevicePath}]");
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Заряд: {status.Percent}% | Зарядка: {status.IsCharging} | Сон: {status.IsSleeping}");
                     found = true;
                     break;
                 }

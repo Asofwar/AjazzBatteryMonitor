@@ -1,47 +1,46 @@
-# AJAZZ AJ179 APEX Battery Monitor (v1.1.3)
+# AJAZZ Battery Monitor
 
-Легковесное Windows-приложение для отслеживания уровня заряда мыши **AJAZZ AJ179 APEX** через **Bluetooth LE GATT Battery Service** и резервный **2.4 GHz HID Feature Report**.
+AJAZZ Battery Monitor is a Windows 10/11 x64 tray application for monitoring the battery of an AJAZZ AJ179 APEX mouse. It tries Bluetooth LE Battery Service (`0x180F` / `0x2A19`) first and only uses the HID Feature Report fallback for an explicitly approved control collection.
 
----
+## Status
 
-## Особенности версии 1.1.3
+The target version is `1.2.0`. Version metadata is centralized in `Directory.Build.props`.
 
-- **Исправление локального времени (`IClock` / `SystemClock`)**:
-  - Хранение отметок времени строго в UTC (ISO 8601).
-  - Преобразование в пользовательском UI через `TimeZoneInfo.Local` (Windows local time zone).
-  - Исправлено отображение времени во всех карточках, футере, трее и окне диагностики.
-- **Устранение сбоя `ModernButton.OnPaint`**:
-  - Исправлено некорректное уничтожение `Font` контрола.
-  - Безопасная отрисовка текста через `TextRenderer` с `try...catch` fallback-режимом.
-  - Исключено появление белых блоков с красным крестом.
-- **Повышение конфиденциальности логов**:
-  - Автоматическое обезличивание Bluetooth MAC-адресов и уникальных DeviceInformation ID в логах (`[id redacted]`).
-- **Строгие доказательства исполнения**:
-  - Полный отказ от синтетических изображений.
-  - Захват снимков реально запущенного приложения (`scripts/capture-real-ui.ps1`) с генерацией манифеста `capture-manifest.json` и хешей SHA-256.
-- **Согласованный статус состояний**: Исключение противоречивых состояний (`[Подключена]` и `[Отключено]`). Единый точный маппинг для Bluetooth LE, 2.4 GHz HID и USB соединения.
-- **Двойной транспорт телеметрии**: Автоматический выбор между нативным **Bluetooth LE GATT** (Service `0x180F` / Characteristic `0x2A19`) и аппаратно подтвержденным 2-step **Win32 HID Feature Report** протоколом (`SET_FEATURE 0xF7` -> 30ms -> `GET_FEATURE 0x05`).
-- **Современный UI**: Дизайн-система с поддержкой светлой и тёмной тем, круговым индикатором `BatteryGaugeControl`, карточками статуса и графиками истории разряда.
-- **Интеллектуальные уведомления**: Windows 10/11 Toast Notifications с защитой от спама, гистерезисом 5%, пороговыми уровнями 20%, 10%, 5%, критическими напоминаниями и balloon tip fallback.
-- **Динамический системный трей**: Векторные иконки высокого разрешения (16x16–32x32) с белыми цифрами процента, индикаторами молнии `⚡`, сна `Z` и отсоединения `×`.
-- **Чистый WinForms ApplicationContext**: Отсутствие WPF/Electron/WebView фреймворков для гарантии работы single-file portable EXE без вылетов.
+Hardware support is intentionally conservative: a successful real-device read is required before claiming that a transport is supported. CI runs non-hardware tests only; it cannot validate a physical mouse.
 
----
+## Build and test
 
-## Сборка и запуск
+Requirements: Windows 10/11 and .NET SDK 8.
 
-### Системные требования
-- Windows 10 (19041+) или Windows 11
-- .NET 8.0 SDK (для сборки)
-
-### Быстрый запуск
 ```powershell
-# Запуск публикации portable EXE v1.1.1
-powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1
-
-# Упаковка ZIP архивов
-powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
-
-# Запуск автоматического smoke-теста
-powershell -ExecutionPolicy Bypass -File .\scripts\smoke-test-app.ps1
+dotnet restore AjazzBattery.sln --locked-mode
+dotnet build AjazzBattery.sln --configuration Release --no-restore
+dotnet test AjazzBattery.sln --configuration Release --no-build --filter "Category!=Hardware"
 ```
+
+To create a self-contained portable executable:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
+```
+
+The optional per-user installer is built with Inno Setup 6:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1
+```
+
+It installs to `%LocalAppData%\Programs\AJAZZ Battery Monitor` without UAC. User settings and history remain under `%LocalAppData%\AjazzBatteryMonitor` and are preserved by default on upgrade and uninstall.
+
+## Privacy
+
+Do not publish Bluetooth MAC addresses, full BLE identifiers, HID paths, serial numbers, local paths, logs, diagnostic archives, settings or battery history in issues, releases or pull requests. The project contains no screenshots, images or UI captures.
+
+## Code signing
+
+Release binaries are unsigned unless a release workflow receives the configured signing secrets. Unsigned Windows executables can show a SmartScreen warning.
+
+## License
+
+License selection remains pending the third-party provenance and compatibility audit. Do not redistribute this repository as a licensed public release until that audit is complete.

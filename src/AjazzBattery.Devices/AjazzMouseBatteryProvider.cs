@@ -17,7 +17,7 @@ public sealed class AjazzMouseBatteryProvider : IMouseBatteryProvider
 
     public bool CanHandle(DeviceDescriptor device)
     {
-        return device.VendorId == 0x3151 || device.VendorId == 0x248A || device.VendorId == 0x249A;
+        return _registry.FindMatchingProfile(device) is not null;
     }
 
     public async Task<BatteryStatus> ReadStatusAsync(
@@ -31,9 +31,16 @@ public sealed class AjazzMouseBatteryProvider : IMouseBatteryProvider
         }
 
         var profile = _registry.FindMatchingProfile(device);
-        byte queryReportId = profile?.QueryReportId ?? 0x00;
-        byte queryOpcode = profile?.QueryOpcode ?? 0xF7;
-        byte responseReportId = profile?.ResponseReportId ?? 0x05;
+        if (profile is null)
+        {
+            return BatteryStatus.CreateUnknown(
+                "Неподтверждённая HID collection: опрос Feature Report запрещён",
+                ProviderState.UnsupportedProtocol);
+        }
+
+        byte queryReportId = profile.QueryReportId;
+        byte queryOpcode = profile.QueryOpcode;
+        byte responseReportId = profile.ResponseReportId;
 
         int[] retryDelaysMs = { 0, 100, 300 };
 
@@ -81,6 +88,10 @@ public sealed class AjazzMouseBatteryProvider : IMouseBatteryProvider
                 {
                     Logger.Log("HID_POLL_RETRY", $"Attempt {attempt + 1}: Telemetry not ready yet (zero frame). Retrying...");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

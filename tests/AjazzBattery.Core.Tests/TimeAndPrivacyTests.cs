@@ -71,6 +71,16 @@ public class TimeAndPrivacyTests
     }
 
     [Fact]
+    public void TestLogger_RedactsHidAndLocalPaths()
+    {
+        const string raw = @"Path [redacted HID path] [redacted local path]";
+        string redacted = Logger.RedactSensitiveData(raw);
+
+        Assert.DoesNotContain("HID#VID", redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(@"[redacted local path]", redacted, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void TestModernButton_GetPreferredSize_AndRepeatedPaintsDoNotDisposeFont()
     {
         using var btn = new ModernButton { Text = "Проверить" };

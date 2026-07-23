@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Validate tag and centralized version
+        shell: pwsh
+        run: |
+          $tagVersion = '${{ github.ref_name }}'.Substring(1)
+          [xml]$props = Get-Content Directory.Build.props
+          if ($tagVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Tag must be vMAJOR.MINOR.PATCH.' }
+          if ($props.Project.PropertyGroup.Version -ne $tagVersion) { throw 'Tag and Directory.Build.props versions differ.' }
+      - name: Restore locked dependencies
+        run: dotnet restore AjazzBattery.sln --locked-mode --runtime win-x64
+      - name: Build and test
+        run: |
+          dotnet build AjazzBattery.sln --configuration Release --no-restore
+          dotnet test AjazzBattery.sln --configuration Release --no-build --filter "Category!=Hardware"
+      - name: Build release assets
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1
+          powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1
+          powershell -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1
+          powershell -ExecutionPolicy Bypass -File .\scripts\generate-sbom.ps1
+          powershell -ExecutionPolicy Bypass -File .\scripts\generate-checksums.ps1
+          powershell -ExecutionPolicy Bypass -File .\scripts\verify-release.ps1
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/AjazzBatteryMonitor-win-x64-${{ github.ref_name }}.exe
+            artifacts/AjazzBatteryMonitor-win-x64-${{ github.ref_name }}-portable.zip
+            artifacts/AjazzBatteryMonitor-Setup-${{ github.ref_name }}.exe
+            artifacts/AjazzBatteryMonitor-${{ github.ref_name }}.sbom.json
+            artifacts/SHA256SUMS.txt
+            artifacts/THIRD-PARTY-NOTICES.txt

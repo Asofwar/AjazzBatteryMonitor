@@ -1,9 +1,10 @@
 using System.Text.Json;
+using AjazzBattery.Core.Notifications;
 
 namespace AjazzBattery.Storage;
 
 public sealed record AppSettings(
-    bool AutoStart = true,
+    bool AutoStart = false,
     int LowBatteryThreshold = 20,
     int RefreshIntervalSeconds = 30,
     bool EnableNotifications = true,
@@ -22,17 +23,21 @@ public sealed class BatteryHistoryStorage
     private readonly string _storageDir;
     private readonly string _settingsPath;
     private readonly string _historyPath;
+    private readonly string _notificationSettingsPath;
+    private readonly string _notificationStatePath;
 
     public BatteryHistoryStorage()
     {
         _storageDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "AjazzBatteryMonitor"
         );
         Directory.CreateDirectory(_storageDir);
 
         _settingsPath = Path.Combine(_storageDir, "settings.json");
         _historyPath = Path.Combine(_storageDir, "history.json");
+        _notificationSettingsPath = Path.Combine(_storageDir, "notification-settings.json");
+        _notificationStatePath = Path.Combine(_storageDir, "notification-state.json");
     }
 
     public AppSettings LoadSettings()
@@ -57,6 +62,18 @@ public sealed class BatteryHistoryStorage
             File.WriteAllText(_settingsPath, json);
         }
         catch { }
+    }
+
+    public BatteryNotificationSettings LoadNotificationSettings()
+        => LoadJson<BatteryNotificationSettings>(_notificationSettingsPath) ?? new BatteryNotificationSettings();
+
+    public BatteryNotificationState LoadNotificationState()
+        => LoadJson<BatteryNotificationState>(_notificationStatePath) ?? new BatteryNotificationState();
+
+    public void SaveNotificationState(BatteryNotificationSettings settings, BatteryNotificationState state)
+    {
+        SaveJson(_notificationSettingsPath, settings);
+        SaveJson(_notificationStatePath, state);
     }
 
     public void AppendHistory(int? percent, bool? isCharging, string connectionMode)
@@ -90,5 +107,28 @@ public sealed class BatteryHistoryStorage
         }
         catch { }
         return new List<BatteryHistoryEntry>();
+    }
+
+    private static T? LoadJson<T>(string path)
+    {
+        try
+        {
+            return File.Exists(path) ? JsonSerializer.Deserialize<T>(File.ReadAllText(path)) : default;
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    private static void SaveJson<T>(string path, T value)
+    {
+        try
+        {
+            File.WriteAllText(path, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch
+        {
+        }
     }
 }

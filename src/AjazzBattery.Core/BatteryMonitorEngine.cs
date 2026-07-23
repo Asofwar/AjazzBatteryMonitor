@@ -68,8 +68,8 @@ public sealed class BatteryMonitorEngine
                 return noDeviceStatus;
             }
 
-            var hidProvider = _providers.FirstOrDefault(p => p.ProviderId == "AjazzYichipHardwareProvider")
-                           ?? _providers.FirstOrDefault(p => p.CanHandle(collections[0]));
+            var hidProvider = _providers.FirstOrDefault(
+                p => p.ProviderId != "AjazzBleBatteryProvider" && collections.Any(p.CanHandle));
 
             if (hidProvider == null)
             {
@@ -88,6 +88,7 @@ public sealed class BatteryMonitorEngine
             {
                 // Skip standard mouse input collection (0x0001 / 0x0002)
                 if (collection.UsagePage == 0x0001 && collection.Usage == 0x0002) continue;
+                if (!hidProvider.CanHandle(collection)) continue;
 
                 var status = await hidProvider.ReadStatusAsync(collection, cancellationToken);
                 if (status.IsPresent && status.Percent.HasValue)

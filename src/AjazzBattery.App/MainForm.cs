@@ -80,7 +80,7 @@ public sealed class MainForm : ThemeAwareForm
         _autoStartManager = autoStartManager ?? throw new ArgumentNullException(nameof(autoStartManager));
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
 
-        Text = "AJAZZ AJ179 APEX — Монитор батареи (v1.1.3)";
+        Text = $"AJAZZ AJ179 APEX — Монитор батареи (v{AppVersion.Display})";
         Size = new Size(780, 520);
         MinimumSize = new Size(680, 480);
         StartPosition = FormStartPosition.CenterScreen;
@@ -292,6 +292,16 @@ public sealed class MainForm : ThemeAwareForm
         _chkAutoStart = new CheckBox { Text = "Запускать с Windows", Checked = _autoStartManager.IsAutoStartEnabled(), AutoSize = true, Margin = new Padding(0, 12, 0, 4) };
         _chkAutoStart.CheckedChanged += (s, e) => _autoStartManager.SetAutoStart(_chkAutoStart.Checked);
 
+        EventHandler notificationSettingChanged = (s, e) => SaveNotificationSettings();
+        _chkNotificationsEnabled.CheckedChanged += notificationSettingChanged;
+        _chkThreshold20.CheckedChanged += notificationSettingChanged;
+        _chkThreshold10.CheckedChanged += notificationSettingChanged;
+        _chkThreshold5.CheckedChanged += notificationSettingChanged;
+        _chkCriticalReminder.CheckedChanged += notificationSettingChanged;
+        _chkChargingStarted.CheckedChanged += notificationSettingChanged;
+        _chkFullyCharged.CheckedChanged += notificationSettingChanged;
+        _cboReminderInterval.SelectedIndexChanged += notificationSettingChanged;
+
         _tblSettingsContent.Controls.Add(_chkNotificationsEnabled);
         _tblSettingsContent.Controls.Add(_chkThreshold20);
         _tblSettingsContent.Controls.Add(_chkThreshold10);
@@ -396,6 +406,33 @@ public sealed class MainForm : ThemeAwareForm
         {
             throw new InvalidOperationException($"Runtime layout invariant failed! Expected nav labels ['Обзор', 'История', 'Настройки'], got [{string.Join(", ", navs)}]");
         }
+    }
+
+    private void SaveNotificationSettings()
+    {
+        var settings = _notificationService.Settings;
+        settings.NotificationsEnabled = _chkNotificationsEnabled.Checked;
+        settings.Thresholds = new[]
+        {
+            (_chkThreshold20.Checked, 20),
+            (_chkThreshold10.Checked, 10),
+            (_chkThreshold5.Checked, 5)
+        }
+        .Where(x => x.Item1)
+        .Select(x => x.Item2)
+        .ToList();
+        settings.CriticalReminderEnabled = _chkCriticalReminder.Checked;
+        settings.CriticalReminderIntervalMinutes = _cboReminderInterval.SelectedIndex switch
+        {
+            0 => 15,
+            2 => 60,
+            3 => 120,
+            _ => 30
+        };
+        settings.NotifyChargingStarted = _chkChargingStarted.Checked;
+        settings.NotifyFullyCharged = _chkFullyCharged.Checked;
+        settings.ValidateAndSanitize();
+        _notificationService.Persist();
     }
 
     public void UpdateUi(BatteryStatus status)

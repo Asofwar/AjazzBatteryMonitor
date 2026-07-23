@@ -52,28 +52,28 @@ public class NotificationEngineTests
     }
 
     [Fact]
-    public void Rule3_DownwardCrossing10Percent_Sends10PercentNotification()
+    public async Task Rule3_DownwardCrossing10Percent_Sends10PercentNotification()
     {
         var primary = new FakeNotificationTransport();
         var fallback = new FakeNotificationTransport();
         var state = new BatteryNotificationState { LastPercent = 11, InitialReadingProcessed = true, TriggeredThresholds = new() { 20 } };
         var service = new BatteryNotificationService(primary, fallback, state: state);
 
-        service.ProcessBatteryUpdateAsync(CreateStatus(10)).Wait();
+        await service.ProcessBatteryUpdateAsync(CreateStatus(10));
 
         Assert.Single(primary.SentNotifications);
         Assert.Equal("threshold_10", primary.SentNotifications[0].Category);
     }
 
     [Fact]
-    public void Rule4_DownwardCrossing5Percent_SendsCriticalNotification()
+    public async Task Rule4_DownwardCrossing5Percent_SendsCriticalNotification()
     {
         var primary = new FakeNotificationTransport();
         var fallback = new FakeNotificationTransport();
         var state = new BatteryNotificationState { LastPercent = 6, InitialReadingProcessed = true, TriggeredThresholds = new() { 20, 10 } };
         var service = new BatteryNotificationService(primary, fallback, state: state);
 
-        service.ProcessBatteryUpdateAsync(CreateStatus(5)).Wait();
+        await service.ProcessBatteryUpdateAsync(CreateStatus(5));
 
         Assert.Single(primary.SentNotifications);
         Assert.Equal("threshold_5", primary.SentNotifications[0].Category);
