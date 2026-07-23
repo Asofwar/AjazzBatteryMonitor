@@ -16,7 +16,7 @@ if ($violations.Count -gt 0) {
 
 $historyPattern = '(BEGIN [A-Z ]+PRIVATE KEY|client_secret|password=|api[_-]?key|\\\\\\?\\HID#|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+)'
 $commits = git rev-list --all
-$historyMatches = @(git grep -n -I -E $historyPattern $commits -- . ':!**/bin/**' ':!**/obj/**')
+$historyMatches = @(git grep -n -I -E $historyPattern $commits -- . ':!**/bin/**' ':!**/obj/**' ':!scripts/scan-publication.ps1')
 if ($LASTEXITCODE -eq 0 -and $historyMatches.Count -gt 0) {
     throw 'Potential private data found in Git history. Inspect locally; do not publish the matched content.'
 }
