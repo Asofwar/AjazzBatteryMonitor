@@ -33,8 +33,27 @@ if ($LASTEXITCODE -ne 0) { throw "Publish failed with exit code $LASTEXITCODE." 
 
 $PublishedExe = Get-ChildItem -Path "$ArtifactsDir\publish_temp" -Filter "*.exe" | Select-Object -First 1
 if ($PublishedExe) {
-    Copy-Item $PublishedExe.FullName -Destination "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.2.0.exe" -Force
-    Write-Output "Published EXE to: $ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.2.0.exe"
+    $releaseExe = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.2.0.exe"
+    $copied = $false
+    for ($attempt = 1; $attempt -le 5 -and -not $copied; $attempt++) {
+        try {
+            Copy-Item $PublishedExe.FullName -Destination $releaseExe -Force -ErrorAction Stop
+            $copied = $true
+        }
+        catch {
+            if (Test-Path $releaseExe) {
+                $sourceHash = (Get-FileHash -Algorithm SHA256 $PublishedExe.FullName).Hash
+                $releaseHash = (Get-FileHash -Algorithm SHA256 $releaseExe).Hash
+                if ($sourceHash -eq $releaseHash) {
+                    $copied = $true
+                    break
+                }
+            }
+            if ($attempt -eq 5) { throw "Could not replace the release executable after $attempt attempts: $($_.Exception.Message)" }
+            Start-Sleep -Seconds 2
+        }
+    }
+    Write-Output "Published EXE to: $releaseExe"
 } else {
     Write-Error "Could not find the published executable."
 }

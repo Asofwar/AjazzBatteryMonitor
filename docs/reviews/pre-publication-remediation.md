@@ -18,4 +18,4 @@
 | Physical AJ179 APEX HID/BLE reading | `NOT_PROVEN` — no real-device evidence in this audit. |
 | GitHub workflow execution | `NOT_EXECUTED` — no remote repository/release has been created. |
 | Windows code signing | `NOT_CONFIGURED` — the workflow supports conditional signing but no certificate was supplied. |
-| License/provenance | `BLOCKED` — see `license-audit.md`; public distribution must not proceed. |
+| License/provenance | `PASS WITH GPL OBLIGATIONS` — GPL-3.0-or-later is declared; corresponding source and notices must accompany public binaries. |

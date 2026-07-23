@@ -4,7 +4,7 @@
 
 - `THIRD-PARTY-NOTICES.md` identifies `ajazz-control-center` as a GPL-3.0 protocol reference.
 - The additional sources listed in `docs/upstream-comparison.md` were audited on 2026-07-24: Nibble commit `26568a9efe4003abc58b80e2739062d069cf1275` contains GPL-3.0-or-later terms; Aj179PStat commit `6c3be85598cd5f728530d729f7e4918a0b7b53f0` has no root license file.
-- No root `LICENSE` file or explicit permission from the upstream copyright holder is present.
+- GPL-3.0-or-later was selected by the maintainer on 2026-07-24 and is declared in the root `LICENSE` and build metadata.
 - The local repository history does not establish whether implementation code was independently written from protocol facts or derived from GPL-licensed source.
 - A source-structure comparison was performed against upstream commit `03a29f7a90dd32057ca7cd0d6e6fa8f13d5400f3` on 2026-07-24. The upstream is a C++/Qt multi-device control centre; this repository is a C#/.NET tray monitor with distinct project structure and APIs. Both describe the same public hardware facts: the HID status poll, report identifier and response layout.
 
@@ -14,13 +14,12 @@ The comparison supports that there is no same-language, file-for-file reuse. It 
 
 ## Verdict
 
-`BLOCKED` for public distribution. A correct project license cannot be selected from the available evidence without making an unsupported provenance assertion.
+`PASS WITH GPL OBLIGATIONS`. GPL-3.0-or-later is compatible with the identified GPL sources and does not require an unsupported clean-room assertion.
 
-Do not label the project MIT, proprietary, or GPL solely to clear this gate. Before public publication, the maintainer must either document independent implementation from non-copyrightable protocol facts, obtain appropriate upstream permission, or adopt a license after confirming that all incorporated code is compatible with it.
+Do not relabel the project as MIT or proprietary without a new provenance audit. Public distributions must retain the GPL license, corresponding source and applicable notices.
 
 ## Follow-up required
 
-1. Record the protocol-source provenance and any copied or adapted code.
-2. Have the copyright holder or maintainer confirm that the implementation is independent, or identify the incorporated GPL code.
-3. Have the copyright holder or maintainer select the project license based on that record.
-4. Add the selected root `LICENSE`, update notices and re-run this audit.
+1. Retain the protocol-source provenance and identify any future copied or adapted code.
+2. Distribute complete corresponding source and the GPL notice with each public binary release.
+3. Re-run this audit before changing the license or adding new upstream code.

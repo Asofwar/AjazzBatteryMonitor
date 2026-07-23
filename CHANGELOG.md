@@ -24,8 +24,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - removed diagnostic, screenshot and local-environment publication paths
 - release workflow validates version, locked dependencies, tests, SBOM and checksums before upload
+- selected GPL-3.0-or-later and documented upstream protocol provenance
 
 ### Known limitations
 
 - real-device HID/BLE telemetry remains unverified by automated tests
-- public licensing remains blocked pending a provenance decision for the upstream protocol reference

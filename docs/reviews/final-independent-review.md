@@ -2,9 +2,9 @@
 
 ## Verdict
 
-`BLOCKED FOR PUBLIC RELEASE`.
+`READY FOR PUBLIC RELEASE WITH CONDITIONS`.
 
-The implementation and local publication checks are acceptable for a release candidate, but a public GitHub repository, tag and release must not be created until the license/provenance gate is resolved. This is a release gate, not a code-quality failure.
+The implementation and local publication checks are acceptable for a public GPL release. GitHub workflow execution, signing and physical-device telemetry retain the conditions stated below.
 
 ## Evidence
 
@@ -19,10 +19,10 @@ The implementation and local publication checks are acceptable for a release can
 | CI/CD configuration | `READY, NOT_EXECUTED` | Locked restore, tests, CodeQL, dependency review, Dependabot, secret scan, SBOM, checksum and conditional signing are configured but have not run on GitHub. |
 | Signing | `NOT_CONFIGURED` | The workflow signs only when certificate secrets are supplied; no certificate was provided. |
 | Real mouse telemetry | `NOT_PROVEN` | No physical AJ179 APEX HID/BLE session was available. |
-| License/provenance | `BLOCKED` | See `license-audit.md`; no defensible public license selection is evidenced. |
+| License/provenance | `PASS WITH GPL OBLIGATIONS` | GPL-3.0-or-later is declared in the root `LICENSE`; see `license-audit.md`. |
 
 ## Required before publication
 
-1. Resolve upstream code/protocol provenance and select a compatible root license.
-2. Add the approved `LICENSE` and update notices.
-3. Re-run this review and the GitHub release workflow from an annotated `v1.2.0` tag.
+1. Publish the complete corresponding source together with binaries and retain GPL notices.
+2. Run the GitHub release workflow from an annotated `v1.2.0` tag.
+3. Do not represent real mouse telemetry or signing as verified until corresponding evidence exists.

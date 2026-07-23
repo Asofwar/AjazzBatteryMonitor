@@ -43,4 +43,4 @@ Release binaries are unsigned unless a release workflow receives the configured 
 
 ## License
 
-License selection remains pending the third-party provenance and compatibility audit. Do not redistribute this repository as a licensed public release until that audit is complete.
+Licensed under [GPL-3.0-or-later](LICENSE). The protocol provenance audit is retained for traceability; it does not claim clean-room implementation or remove the GPL obligations.
