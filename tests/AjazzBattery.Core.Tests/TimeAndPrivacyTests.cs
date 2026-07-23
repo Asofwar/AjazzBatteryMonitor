@@ -63,21 +63,23 @@ public class TimeAndPrivacyTests
     [Fact]
     public void TestLogger_RedactsBluetoothMacAndDeviceIds()
     {
-        string raw = "Found matching BLE Device: AJ179 APEX (BluetoothLE#[redacted])";
+        const string raw = "Found matching BLE Device: AJ179 APEX (BluetoothLE#[redacted]vice-id)";
         string redacted = Logger.RedactSensitiveData(raw);
 
-        Assert.DoesNotContain("38:d5:7a:eb:8f:ee", redacted);
+        Assert.DoesNotContain("device-id", redacted);
         Assert.Contains("[id redacted]", redacted);
     }
 
     [Fact]
     public void TestLogger_RedactsHidAndLocalPaths()
     {
-        const string raw = @"Path [redacted HID path] [redacted local path]";
+        string hidPath = string.Concat(@"\\?\", "HID#", "DEVICE");
+        string localPath = Path.Combine("C:", "Users", "redacted", "report.txt");
+        string raw = $"Path {hidPath} {localPath}";
         string redacted = Logger.RedactSensitiveData(raw);
 
-        Assert.DoesNotContain("HID#VID", redacted, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(@"[redacted local path]", redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("HID#DEVICE", redacted, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(localPath, redacted, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
