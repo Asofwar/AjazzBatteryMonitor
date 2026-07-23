@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AjazzBattery.Core\AjazzBattery.Core.csproj" />
     <ProjectReference Include="..\..\src\AjazzBattery.Hid\AjazzBattery.Hid.csproj" />
+    <ProjectReference Include="..\..\src\AjazzBattery.Bluetooth\AjazzBattery.Bluetooth.csproj" />
     <ProjectReference Include="..\..\src\AjazzBattery.Devices\AjazzBattery.Devices.csproj" />
     <ProjectReference Include="..\..\src\AjazzBattery.Storage\AjazzBattery.Storage.csproj" />
   </ItemGroup>

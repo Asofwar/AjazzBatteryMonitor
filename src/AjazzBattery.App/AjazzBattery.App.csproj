@@ -1,15 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <Version>1.0.1</Version>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\AjazzBattery.Core\AjazzBattery.Core.csproj" />
     <ProjectReference Include="..\AjazzBattery.Hid\AjazzBattery.Hid.csproj" />
+    <ProjectReference Include="..\AjazzBattery.Bluetooth\AjazzBattery.Bluetooth.csproj" />
     <ProjectReference Include="..\AjazzBattery.Devices\AjazzBattery.Devices.csproj" />
     <ProjectReference Include="..\AjazzBattery.Storage\AjazzBattery.Storage.csproj" />
   </ItemGroup>
