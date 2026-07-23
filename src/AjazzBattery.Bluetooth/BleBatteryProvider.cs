@@ -105,6 +105,7 @@ public sealed class BleBatteryProvider : IMouseBatteryProvider
 
             Logger.Log("BLE_SUCCESS", $"Successfully read battery over Bluetooth LE: {percent}%");
 
+            var timestamp = DateTimeOffset.UtcNow;
             return new BatteryStatus(
                 IsPresent: true,
                 Percent: percent,
@@ -112,11 +113,13 @@ public sealed class BleBatteryProvider : IMouseBatteryProvider
                 IsFullyCharged: null,
                 IsSleeping: false,
                 ConnectionMode: ConnectionMode.BluetoothLe,
-                Timestamp: DateTimeOffset.UtcNow,
+                Timestamp: timestamp,
                 Confidence: StatusConfidence.High,
                 DiagnosticMessage: $"GATT BLE OK | Battery: {percent}%",
                 State: ProviderState.Connected,
-                ActiveTransport: "Bluetooth LE GATT (0x180F/0x2A19)"
+                ActiveTransport: "Bluetooth LE GATT (0x180F/0x2A19)",
+                BatteryTimestamp: timestamp,
+                ConnectionStateTimestamp: timestamp
             );
         }
         catch (Exception ex)

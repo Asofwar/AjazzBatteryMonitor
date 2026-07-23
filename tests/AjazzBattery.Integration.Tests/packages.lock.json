@@ -117,7 +117,7 @@
       "ajazzbattery.bluetooth": {
         "type": "Project",
         "dependencies": {
-          "AjazzBattery.Core": "[1.2.0, )"
+          "AjazzBattery.Core": "[1.2.1, )"
         }
       },
       "ajazzbattery.core": {
@@ -126,21 +126,21 @@
       "ajazzbattery.devices": {
         "type": "Project",
         "dependencies": {
-          "AjazzBattery.Core": "[1.2.0, )",
-          "AjazzBattery.Hid": "[1.2.0, )"
+          "AjazzBattery.Core": "[1.2.1, )",
+          "AjazzBattery.Hid": "[1.2.1, )"
         }
       },
       "ajazzbattery.hid": {
         "type": "Project",
         "dependencies": {
-          "AjazzBattery.Core": "[1.2.0, )",
+          "AjazzBattery.Core": "[1.2.1, )",
           "System.Management": "[8.0.0, )"
         }
       },
       "ajazzbattery.storage": {
         "type": "Project",
         "dependencies": {
-          "AjazzBattery.Core": "[1.2.0, )"
+          "AjazzBattery.Core": "[1.2.1, )"
         }
       }
     },

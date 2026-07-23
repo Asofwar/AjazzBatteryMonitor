@@ -10,8 +10,8 @@
 
 ## Evidence
 
-- static code review: PASS after allowlist and stale-state corrections
-- non-hardware build and tests: PASS, 45/45
+- static code review: PASS after freshness/debounce corrections
+- non-hardware build and tests: PASS, 47/47
 - awake-off-dock hardware capture: NOT_EXECUTED
 - sleeping-off-dock hardware capture: PASS, five HID 2.4G readings; charging unknown, sleeping true
 - on-dock-charging hardware capture: NOT_EXECUTED

@@ -1,6 +1,6 @@
 [
   {
-    "TimestampUtc": "2026-07-23T21:40:00.9097198+00:00",
+    "TimestampUtc": "2026-07-23T21:44:47.689669+00:00",
     "PhysicalState": "state-sleeping-off-dock",
     "Transport": "HID 2.4G",
     "FrameLength": 65,
@@ -11,10 +11,14 @@
     "IsSleeping": true,
     "Confidence": 0,
     "ChargingConfidence": 0,
+    "BatteryTimestamp": "2026-07-23T21:44:47.6887418+00:00",
+    "ChargingStateTimestamp": null,
+    "ConnectionStateTimestamp": "2026-07-23T21:44:47.6887418+00:00",
+    "ChargingDebounceCount": 0,
     "State": 6
   },
   {
-    "TimestampUtc": "2026-07-23T21:40:02.061049+00:00",
+    "TimestampUtc": "2026-07-23T21:44:48.834731+00:00",
     "PhysicalState": "state-sleeping-off-dock",
     "Transport": "HID 2.4G",
     "FrameLength": 65,
@@ -25,10 +29,14 @@
     "IsSleeping": true,
     "Confidence": 0,
     "ChargingConfidence": 0,
+    "BatteryTimestamp": "2026-07-23T21:44:48.8345976+00:00",
+    "ChargingStateTimestamp": null,
+    "ConnectionStateTimestamp": "2026-07-23T21:44:48.8345976+00:00",
+    "ChargingDebounceCount": 0,
     "State": 6
   },
   {
-    "TimestampUtc": "2026-07-23T21:40:03.1985086+00:00",
+    "TimestampUtc": "2026-07-23T21:44:49.9676062+00:00",
     "PhysicalState": "state-sleeping-off-dock",
     "Transport": "HID 2.4G",
     "FrameLength": 65,
@@ -39,10 +47,14 @@
     "IsSleeping": true,
     "Confidence": 0,
     "ChargingConfidence": 0,
+    "BatteryTimestamp": "2026-07-23T21:44:49.9674903+00:00",
+    "ChargingStateTimestamp": null,
+    "ConnectionStateTimestamp": "2026-07-23T21:44:49.9674903+00:00",
+    "ChargingDebounceCount": 0,
     "State": 6
   },
   {
-    "TimestampUtc": "2026-07-23T21:40:04.3239824+00:00",
+    "TimestampUtc": "2026-07-23T21:44:51.1085741+00:00",
     "PhysicalState": "state-sleeping-off-dock",
     "Transport": "HID 2.4G",
     "FrameLength": 65,
@@ -53,10 +65,14 @@
     "IsSleeping": true,
     "Confidence": 0,
     "ChargingConfidence": 0,
+    "BatteryTimestamp": "2026-07-23T21:44:51.1084467+00:00",
+    "ChargingStateTimestamp": null,
+    "ConnectionStateTimestamp": "2026-07-23T21:44:51.1084467+00:00",
+    "ChargingDebounceCount": 0,
     "State": 6
   },
   {
-    "TimestampUtc": "2026-07-23T21:40:05.4729529+00:00",
+    "TimestampUtc": "2026-07-23T21:44:52.2459045+00:00",
     "PhysicalState": "state-sleeping-off-dock",
     "Transport": "HID 2.4G",
     "FrameLength": 65,
@@ -67,6 +83,10 @@
     "IsSleeping": true,
     "Confidence": 0,
     "ChargingConfidence": 0,
+    "BatteryTimestamp": "2026-07-23T21:44:52.2457871+00:00",
+    "ChargingStateTimestamp": null,
+    "ConnectionStateTimestamp": "2026-07-23T21:44:52.2457871+00:00",
+    "ChargingDebounceCount": 0,
     "State": 6
   }
 ]

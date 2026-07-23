@@ -35,7 +35,8 @@ public static class YichipBatteryParser
                 DiagnosticMessage: "2.4 GHz телеметрия ещё не готова (нулевой кадр)",
                 State: ProviderState.TelemetryNotReady,
                 ActiveTransport: "HID 2.4G",
-                RawFrameHex: rawResponse
+                RawFrameHex: rawResponse,
+                ConnectionStateTimestamp: timestamp
             );
         }
 
@@ -61,7 +62,8 @@ public static class YichipBatteryParser
                 DiagnosticMessage: $"Отклонен невалидный кадр [0]=0x{reportId:X2} [1]=0x{header1:X2} [2]=0x{header2:X2}",
                 State: ProviderState.InvalidFrame,
                 ActiveTransport: "HID 2.4G",
-                RawFrameHex: rawResponse
+                RawFrameHex: rawResponse,
+                ConnectionStateTimestamp: timestamp
             );
         }
 
@@ -80,7 +82,8 @@ public static class YichipBatteryParser
                 DiagnosticMessage: $"Значение батареи вне диапазона 0..100: {rawPercent}",
                 State: ProviderState.InvalidFrame,
                 ActiveTransport: "HID 2.4G",
-                RawFrameHex: rawResponse
+                RawFrameHex: rawResponse,
+                ConnectionStateTimestamp: timestamp
             );
         }
 
@@ -109,7 +112,9 @@ public static class YichipBatteryParser
             DiagnosticMessage: diagMsg,
             State: ProviderState.Connected,
             ActiveTransport: $"HID 2.4G (0x{device.VendorId:X4}:0x{device.ProductId:X4})",
-            RawFrameHex: rawResponse
+            RawFrameHex: rawResponse,
+            BatteryTimestamp: timestamp,
+            ConnectionStateTimestamp: timestamp
         );
     }
 }

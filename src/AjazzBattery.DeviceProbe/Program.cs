@@ -336,6 +336,10 @@ internal static class Program
                 status.IsSleeping,
                 status.Confidence,
                 status.ChargingConfidence,
+                status.BatteryTimestamp,
+                status.ChargingStateTimestamp,
+                status.ConnectionStateTimestamp,
+                status.ChargingDebounceCount,
                 status.State
             });
             if (reading < 4) await Task.Delay(TimeSpan.FromSeconds(1));

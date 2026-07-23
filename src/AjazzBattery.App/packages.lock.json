@@ -4,8 +4,8 @@
     "net8.0-windows10.0.19041": {
       "Microsoft.NET.ILLink.Tasks": {
         "type": "Direct",
-        "requested": "[8.0.28, )",
-        "resolved": "8.0.28",
+        "requested": "[8.0.29, )",
+        "resolved": "8.0.29",
         "contentHash": "HSBTfrkIZijz8z3ybLRKB7E8rHk4QQufFwpHa9fc5CMIgRhRzdn4mBGmlyXZqaueiMPtuJcnjresGvSTfaW8Mg=="
       },
       "System.CodeDom": {
@@ -24,7 +24,7 @@
       "ajazzbattery.bluetooth": {
         "type": "Project",
         "dependencies": {
-          "AjazzBattery.Core": "[1.2.0, )"
+          "AjazzBattery.Core": "[1.2.1, )"
         }
       },
       "ajazzbattery.core": {
@@ -33,21 +33,21 @@
       "ajazzbattery.devices": {
         "type": "Project",
         "dependencies": {
-          "AjazzBattery.Core": "[1.2.0, )",
-          "AjazzBattery.Hid": "[1.2.0, )"
+          "AjazzBattery.Core": "[1.2.1, )",
+          "AjazzBattery.Hid": "[1.2.1, )"
         }
       },
       "ajazzbattery.hid": {
         "type": "Project",
         "dependencies": {
-          "AjazzBattery.Core": "[1.2.0, )",
+          "AjazzBattery.Core": "[1.2.1, )",
           "System.Management": "[8.0.0, )"
         }
       },
       "ajazzbattery.storage": {
         "type": "Project",
         "dependencies": {
-          "AjazzBattery.Core": "[1.2.0, )"
+          "AjazzBattery.Core": "[1.2.1, )"
         }
       }
     },
