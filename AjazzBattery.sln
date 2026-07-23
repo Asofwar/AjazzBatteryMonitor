@@ -1,0 +1,85 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6AAA5834-4BAF-4A2D-9AE7-89A36D832917}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.App", "src\AjazzBattery.App\AjazzBattery.App.csproj", "{6F1EACAF-BE00-494B-BC6B-AF97CFE028A6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.Core", "src\AjazzBattery.Core\AjazzBattery.Core.csproj", "{4E51B052-81EB-4099-875D-EEA1DAA90F14}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.DeviceProbe", "src\AjazzBattery.DeviceProbe\AjazzBattery.DeviceProbe.csproj", "{7EF45668-10E8-48CC-A683-5FB27E72A0C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.Devices", "src\AjazzBattery.Devices\AjazzBattery.Devices.csproj", "{E4D9DB8C-3177-4B2C-88A1-1A7E41DD91B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.Hid", "src\AjazzBattery.Hid\AjazzBattery.Hid.csproj", "{AE392402-7D89-4EC3-A5C6-7FF691F42393}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.Storage", "src\AjazzBattery.Storage\AjazzBattery.Storage.csproj", "{332D803E-A133-491B-AD85-1D60D089E2E9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{19568A84-7F28-4896-BFD8-F03A6BB30836}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.Core.Tests", "tests\AjazzBattery.Core.Tests\AjazzBattery.Core.Tests.csproj", "{2D714D51-1D54-4A98-B834-11E1472D8CA6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.Integration.Tests", "tests\AjazzBattery.Integration.Tests\AjazzBattery.Integration.Tests.csproj", "{1E251B42-D917-4315-9E3E-DDFDB46217D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AjazzBattery.Protocol.Tests", "tests\AjazzBattery.Protocol.Tests\AjazzBattery.Protocol.Tests.csproj", "{691461A8-6EE1-4EBD-80BC-DF087EBF1D0E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6F1EACAF-BE00-494B-BC6B-AF97CFE028A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F1EACAF-BE00-494B-BC6B-AF97CFE028A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F1EACAF-BE00-494B-BC6B-AF97CFE028A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F1EACAF-BE00-494B-BC6B-AF97CFE028A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E51B052-81EB-4099-875D-EEA1DAA90F14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E51B052-81EB-4099-875D-EEA1DAA90F14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E51B052-81EB-4099-875D-EEA1DAA90F14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E51B052-81EB-4099-875D-EEA1DAA90F14}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7EF45668-10E8-48CC-A683-5FB27E72A0C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EF45668-10E8-48CC-A683-5FB27E72A0C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EF45668-10E8-48CC-A683-5FB27E72A0C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EF45668-10E8-48CC-A683-5FB27E72A0C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4D9DB8C-3177-4B2C-88A1-1A7E41DD91B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4D9DB8C-3177-4B2C-88A1-1A7E41DD91B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4D9DB8C-3177-4B2C-88A1-1A7E41DD91B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4D9DB8C-3177-4B2C-88A1-1A7E41DD91B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE392402-7D89-4EC3-A5C6-7FF691F42393}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE392402-7D89-4EC3-A5C6-7FF691F42393}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE392402-7D89-4EC3-A5C6-7FF691F42393}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE392402-7D89-4EC3-A5C6-7FF691F42393}.Release|Any CPU.Build.0 = Release|Any CPU
+		{332D803E-A133-491B-AD85-1D60D089E2E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{332D803E-A133-491B-AD85-1D60D089E2E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{332D803E-A133-491B-AD85-1D60D089E2E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{332D803E-A133-491B-AD85-1D60D089E2E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D714D51-1D54-4A98-B834-11E1472D8CA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D714D51-1D54-4A98-B834-11E1472D8CA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D714D51-1D54-4A98-B834-11E1472D8CA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D714D51-1D54-4A98-B834-11E1472D8CA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E251B42-D917-4315-9E3E-DDFDB46217D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E251B42-D917-4315-9E3E-DDFDB46217D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E251B42-D917-4315-9E3E-DDFDB46217D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E251B42-D917-4315-9E3E-DDFDB46217D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{691461A8-6EE1-4EBD-80BC-DF087EBF1D0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{691461A8-6EE1-4EBD-80BC-DF087EBF1D0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{691461A8-6EE1-4EBD-80BC-DF087EBF1D0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{691461A8-6EE1-4EBD-80BC-DF087EBF1D0E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6F1EACAF-BE00-494B-BC6B-AF97CFE028A6} = {6AAA5834-4BAF-4A2D-9AE7-89A36D832917}
+		{4E51B052-81EB-4099-875D-EEA1DAA90F14} = {6AAA5834-4BAF-4A2D-9AE7-89A36D832917}
+		{7EF45668-10E8-48CC-A683-5FB27E72A0C3} = {6AAA5834-4BAF-4A2D-9AE7-89A36D832917}
+		{E4D9DB8C-3177-4B2C-88A1-1A7E41DD91B2} = {6AAA5834-4BAF-4A2D-9AE7-89A36D832917}
+		{AE392402-7D89-4EC3-A5C6-7FF691F42393} = {6AAA5834-4BAF-4A2D-9AE7-89A36D832917}
+		{332D803E-A133-491B-AD85-1D60D089E2E9} = {6AAA5834-4BAF-4A2D-9AE7-89A36D832917}
+		{2D714D51-1D54-4A98-B834-11E1472D8CA6} = {19568A84-7F28-4896-BFD8-F03A6BB30836}
+		{1E251B42-D917-4315-9E3E-DDFDB46217D9} = {19568A84-7F28-4896-BFD8-F03A6BB30836}
+		{691461A8-6EE1-4EBD-80BC-DF087EBF1D0E} = {19568A84-7F28-4896-BFD8-F03A6BB30836}
+	EndGlobalSection
+EndGlobal

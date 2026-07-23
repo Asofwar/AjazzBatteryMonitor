@@ -1,0 +1,33 @@
+{
+  "Description": "Anonymized test fixture for AJAZZ AJ179 APEX HID Battery Reports",
+  "Fixtures": [
+    {
+      "Name": "Valid 74% Discharging",
+      "RawHex": "002001014A000000",
+      "ExpectedPercent": 74,
+      "ExpectedIsCharging": false,
+      "ExpectedIsSleeping": false
+    },
+    {
+      "Name": "Valid 100% Fully Charged",
+      "RawHex": "00200101FF000000",
+      "ExpectedPercent": 100,
+      "ExpectedIsCharging": true,
+      "ExpectedIsSleeping": false
+    },
+    {
+      "Name": "Sleeping Mouse State",
+      "RawHex": "0020010230000000",
+      "ExpectedPercent": 48,
+      "ExpectedIsCharging": false,
+      "ExpectedIsSleeping": true
+    },
+    {
+      "Name": "Invalid Opcode Error",
+      "RawHex": "009901014A000000",
+      "ExpectedPercent": null,
+      "ExpectedIsCharging": null,
+      "ExpectedIsSleeping": false
+    }
+  ]
+}

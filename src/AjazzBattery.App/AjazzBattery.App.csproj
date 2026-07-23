@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AjazzBattery.Core\AjazzBattery.Core.csproj" />
+    <ProjectReference Include="..\AjazzBattery.Hid\AjazzBattery.Hid.csproj" />
+    <ProjectReference Include="..\AjazzBattery.Devices\AjazzBattery.Devices.csproj" />
+    <ProjectReference Include="..\AjazzBattery.Storage\AjazzBattery.Storage.csproj" />
+  </ItemGroup>
+</Project>
