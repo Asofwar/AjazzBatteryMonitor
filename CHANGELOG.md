@@ -1,5 +1,20 @@
 # Changelog — AJAZZ AJ179 APEX Battery Monitor
 
+## [1.1.2] - 2026-07-23
+
+### Fixed & Refactored
+- **Strict 4-Row Grid Layout**: Replaced single-row header with dedicated `HeaderLayout` (Row 0, 68px) and `NavigationLayout` (Row 1, 48px).
+- **Navigation Invariants**: Restored active "Обзор" tab button alongside "История" and "Настройки". Navigation text is never cut off or pushed off-screen.
+- **Removed Text Separators**: Removed raw vertical `|` bar characters and bracket strings. Badges use clean rounded pill containers.
+- **StatusCard Dynamic Height**: Rewrote `StatusCard` using nested 3-row `TableLayoutPanel`. Height fits text content dynamically without tall empty space.
+- **Autonomy Text Truncation**: Display text `"≈ 3 дня"` is completely unclipped without `AutoEllipsis`.
+- **CLI Diagnostic Flag**: Added `--dump-ui-tree` flag for dumping control hierarchy tree.
+- **Устранение противоречивых статусов**: Согласована логика между `status.ConnectionMode`, `status.IsPresent` и `status.ActiveTransport` — устранено одновременное отображение «Подключена» и «Отключено».
+- **Адаптация DPI (100%–300%)**: Заголовок и карточки пропорционально масштабируются без наложения элементов друг на друга.
+- **Балансировка пространства**: Устранены пустые зоны в нижней части окна и перегрузка верхней шапки.
+
+---
+
 ## [1.1.1] — 2026-07-23
 
 ### Исправлено

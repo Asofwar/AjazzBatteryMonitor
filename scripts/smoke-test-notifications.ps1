@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path "$PSScriptRoot\.."
-$ExePath = "$RepoRoot\artifacts\AjazzBatteryMonitor-win-x64-v1.1.1.exe"
+$ExePath = "$RepoRoot\artifacts\AjazzBatteryMonitor-win-x64-v1.1.2.exe"
 
 if (-not (Test-Path $ExePath)) {
     Write-Error "Executable not found at $ExePath. Run publish.ps1 first."
@@ -12,6 +12,11 @@ Write-Output "[+] Running Notification Engine Smoke Test on published binary: $E
 
 # Stop any running process instances
 Stop-Process -Name "AjazzBatteryMonitor*" -Force -ErrorAction SilentlyContinue
+
+$LogPath = "$env:LOCALAPPDATA\AjazzBatteryMonitor\logs\startup.log"
+if (Test-Path $LogPath) {
+    Remove-Item $LogPath -Force
+}
 
 $Process = Start-Process -FilePath $ExePath -ArgumentList "--smoke-test-notification", "--allow-multiple-instances" -PassThru
 

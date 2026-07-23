@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using AjazzBattery.Core;
+using AjazzBattery.Core.Notifications;
+using AjazzBattery.Storage;
 
 namespace AjazzBattery.App;
 
@@ -15,7 +17,7 @@ internal static class Program
         // 1. Immediate Startup Logging BEFORE any UI, HID, or BLE initialization
         Logger.Log("STARTUP", "Process started");
         string exePath = Environment.ProcessPath ?? AppContext.BaseDirectory;
-        Logger.Log("STARTUP", "Application version: 1.1.1");
+        Logger.Log("STARTUP", "Application version: 1.1.2");
         Logger.Log("STARTUP", $"Executable path: {exePath}");
         Logger.Log("STARTUP", $"Runtime version: {Environment.Version}");
         Logger.Log("STARTUP", $"OS version: {Environment.OSVersion}");
@@ -36,6 +38,7 @@ internal static class Program
         bool isSmokeTest = args.Contains("--smoke-test");
         bool isSmokeTestUi = args.Contains("--smoke-test-ui");
         bool isSmokeTestNotification = args.Contains("--smoke-test-notification");
+        bool isDumpUiTree = args.Contains("--dump-ui-tree");
 
         int? mockBattery = null;
         foreach (var arg in args)
@@ -44,6 +47,19 @@ internal static class Program
             {
                 if (int.TryParse(arg.Substring("--mock-battery=".Length), out int mb)) mockBattery = mb;
             }
+        }
+
+        if (isDumpUiTree)
+        {
+            ApplicationConfiguration.Initialize();
+            var dummyEngine = new BatteryMonitorEngine(Array.Empty<IMouseBatteryProvider>(), null!, null!, st => { });
+            var dummyNotif = new BatteryNotificationService(new FakeNotificationTransport(), new FakeNotificationTransport());
+            using var form = new MainForm(dummyEngine, dummyNotif, new WindowsAutoStartManager(), new BatteryHistoryStorage());
+            form.ValidateNavigationInvariants();
+            string tree = form.DumpUiTree();
+            Console.WriteLine(tree);
+            Logger.Log("UI_TREE", tree);
+            return;
         }
 
         // 4. Single-Instance Mutex & IPC Event Check

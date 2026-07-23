@@ -6,6 +6,11 @@ namespace AjazzBattery.App.UI.Controls;
 
 public sealed class StatusCard : UserControl
 {
+    private readonly TableLayoutPanel _layout;
+    private readonly Label _lblTitle;
+    private readonly Label _lblValue;
+    private readonly Label _lblSubText;
+
     private string _cardTitle = "ЗАГОЛОВОК";
     private string _cardValue = "Значение";
     private string _cardSubText = "Дополнительно";
@@ -14,33 +19,101 @@ public sealed class StatusCard : UserControl
     public string CardTitle
     {
         get => _cardTitle;
-        set { _cardTitle = value; Invalidate(); }
+        set
+        {
+            _cardTitle = value;
+            _lblTitle.Text = _cardTitle.ToUpperInvariant();
+        }
     }
 
     public string CardValue
     {
         get => _cardValue;
-        set { _cardValue = value; Invalidate(); }
+        set
+        {
+            _cardValue = value;
+            _lblValue.Text = _cardValue;
+        }
     }
 
     public string CardSubText
     {
         get => _cardSubText;
-        set { _cardSubText = value; Invalidate(); }
+        set
+        {
+            _cardSubText = value;
+            _lblSubText.Text = _cardSubText;
+        }
     }
 
     public Color? ValueColor
     {
         get => _valueColor;
-        set { _valueColor = value; Invalidate(); }
+        set
+        {
+            _valueColor = value;
+            _lblValue.ForeColor = _valueColor ?? ThemeManager.Palette.PrimaryText;
+        }
     }
 
     public StatusCard()
     {
         DoubleBuffered = true;
-        Size = new Size(160, 90);
-        Padding = new Padding(12);
-        Font = new Font("Segoe UI Variable Display", 9f);
+        AutoSize = true;
+        AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        Padding = new Padding(0);
+
+        _layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 1,
+            RowCount = 3,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(14),
+            Margin = new Padding(0)
+        };
+
+        _layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        _lblTitle = new Label
+        {
+            Text = _cardTitle.ToUpperInvariant(),
+            Font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold),
+            ForeColor = ThemeManager.Palette.MutedText,
+            AutoSize = true,
+            AutoEllipsis = false,
+            Margin = new Padding(0, 0, 0, 4)
+        };
+
+        _lblValue = new Label
+        {
+            Text = _cardValue,
+            Font = new Font("Segoe UI Variable Display", 11.5f, FontStyle.Bold),
+            ForeColor = ThemeManager.Palette.PrimaryText,
+            AutoSize = true,
+            AutoEllipsis = false,
+            Margin = new Padding(0, 0, 0, 4)
+        };
+
+        _lblSubText = new Label
+        {
+            Text = _cardSubText,
+            Font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Regular),
+            ForeColor = ThemeManager.Palette.SecondaryText,
+            AutoSize = true,
+            AutoEllipsis = false,
+            Margin = new Padding(0)
+        };
+
+        _layout.Controls.Add(_lblTitle, 0, 0);
+        _layout.Controls.Add(_lblValue, 0, 1);
+        _layout.Controls.Add(_lblSubText, 0, 2);
+
+        Controls.Add(_layout);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -49,7 +122,6 @@ public sealed class StatusCard : UserControl
 
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
         var pal = ThemeManager.Palette;
         g.Clear(Parent?.BackColor ?? pal.Background);
@@ -57,32 +129,15 @@ public sealed class StatusCard : UserControl
         var rect = new Rectangle(0, 0, Width - 1, Height - 1);
         int radius = 10;
 
-        using (var path = GetRoundedRectPath(rect, radius))
+        using var path = GetRoundedRectPath(rect, radius);
+        using (var fillBrush = new SolidBrush(pal.Surface))
         {
-            using (var fillBrush = new SolidBrush(pal.Surface))
-            {
-                g.FillPath(fillBrush, path);
-            }
-            using (var borderPen = new Pen(pal.Border, 1.2f))
-            {
-                g.DrawPath(borderPen, path);
-            }
+            g.FillPath(fillBrush, path);
         }
-
-        // Draw Title
-        using var fontTitle = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold);
-        using var brushTitle = new SolidBrush(pal.MutedText);
-        g.DrawString(_cardTitle.ToUpper(), fontTitle, brushTitle, 12, 10);
-
-        // Draw Main Value
-        using var fontVal = new Font("Segoe UI Variable Display", 11.5f, FontStyle.Bold);
-        using var brushVal = new SolidBrush(_valueColor ?? pal.PrimaryText);
-        g.DrawString(_cardValue, fontVal, brushVal, 12, 30);
-
-        // Draw SubText
-        using var fontSub = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Regular);
-        using var brushSub = new SolidBrush(pal.SecondaryText);
-        g.DrawString(_cardSubText, fontSub, brushSub, 12, 58);
+        using (var borderPen = new Pen(pal.Border, 1.2f))
+        {
+            g.DrawPath(borderPen, path);
+        }
     }
 
     private static GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
