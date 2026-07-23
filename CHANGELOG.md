@@ -1,6 +1,13 @@
 # Changelog — AJAZZ AJ179 APEX Battery Monitor
 
-## [1.1.2] - 2026-07-23
+## [1.1.3] - 2026-07-23
+
+### Fixed & Enhanced
+- **Centralized Time Service (`IClock`)**: Implemented `IClock`, `SystemClock`, and `FakeClock`. Timestamps stored in UTC and converted to `TimeZoneInfo.Local` for display. Fixed 3-hour UTC offset display bug across UI, cards, tray, and diagnostics.
+- **Fixed `ModernButton.OnPaint` GDI Crash**: Removed `using var fontBtn = Font;` that accidentally disposed the control's font. Migrated text rendering to safe GDI `TextRenderer` with `try...catch` fallback.
+- **Application Lifecycle Exception Handling**: Introduced `AppLifecyclePhase` (`Starting`, `Running`, `ShuttingDown`) and error fingerprint deduplication to prevent UI paint exceptions from popping up "Startup Error" modal dialogs.
+- **Privacy Log Redaction**: Automatically redact Bluetooth MAC addresses and full BLE DeviceInformation IDs in logs (`[id redacted]`).
+- **Real Screen Capture Evidence Pipeline**: Created `scripts/capture-real-ui.ps1` for capturing actual Win32 window bounds, PID, HWND, SHA-256 hashes, UI Automation tree dump, and capture manifest. Invalidated all previous synthetic AI mockups into `artifacts/mockups-invalid/`.
 
 ### Fixed & Refactored
 - **Strict 4-Row Grid Layout**: Replaced single-row header with dedicated `HeaderLayout` (Row 0, 68px) and `NavigationLayout` (Row 1, 48px).

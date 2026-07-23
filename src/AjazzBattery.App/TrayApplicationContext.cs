@@ -5,6 +5,7 @@ using AjazzBattery.App.UI.Rendering;
 using AjazzBattery.App.UI.Theme;
 using AjazzBattery.Core;
 using AjazzBattery.Core.Notifications;
+using AjazzBattery.Core.Time;
 using AjazzBattery.Devices;
 using AjazzBattery.Hid;
 using AjazzBattery.Bluetooth;
@@ -165,9 +166,10 @@ public sealed class TrayApplicationContext : ApplicationContext
 
             string pctStr = status.Percent.HasValue ? $"{status.Percent}%" : "заряд неизвестен";
             string stateStr = status.IsCharging == true ? "заряжается ⚡" : (status.IsSleeping ? "в режиме сна" : (status.IsPresent ? "подключена" : "отключена"));
-            string connStr = status.ActiveTransport.Contains("BLE") ? "Bluetooth LE" : (status.ActiveTransport.Contains("HID") ? "2.4 GHz" : "—");
+            var localTime = SystemClock.Instance.ToLocal(status.Timestamp);
+            _notifyIcon.Text = $"AJAZZ AJ179 APEX\nЗаряд: {pctStr}\nСостояние: {stateStr}\nОбновлено: {localTime:HH:mm:ss}";
 
-            _notifyIcon.Text = $"AJAZZ AJ179 APEX\nЗаряд: {pctStr}\nСостояние: {stateStr}\nТранспорт: {connStr}";
+            string connStr = status.ActiveTransport.Contains("BLE", StringComparison.OrdinalIgnoreCase) ? "Bluetooth LE" : (status.ActiveTransport.Contains("HID", StringComparison.OrdinalIgnoreCase) ? "2.4 GHz" : "—");
 
             if (_notifyIcon.ContextMenuStrip != null && _notifyIcon.ContextMenuStrip.Items.Count > 1)
             {

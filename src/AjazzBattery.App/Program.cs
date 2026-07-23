@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using AjazzBattery.Core;
@@ -6,22 +7,37 @@ using AjazzBattery.Storage;
 
 namespace AjazzBattery.App;
 
+internal enum AppLifecyclePhase
+{
+    Starting,
+    Running,
+    ShuttingDown
+}
+
 internal static class Program
 {
     private static Mutex? _singleInstanceMutex;
     private static EventWaitHandle? _activateEventHandle;
 
+    private static AppLifecyclePhase _currentPhase = AppLifecyclePhase.Starting;
+    private static readonly ConcurrentDictionary<string, bool> ShownErrorFingerprints = new();
+
+    public static AppLifecyclePhase CurrentPhase => _currentPhase;
+
     [STAThread]
     private static void Main(string[] args)
     {
+        _currentPhase = AppLifecyclePhase.Starting;
+
         // 1. Immediate Startup Logging BEFORE any UI, HID, or BLE initialization
         Logger.Log("STARTUP", "Process started");
         string exePath = Environment.ProcessPath ?? AppContext.BaseDirectory;
-        Logger.Log("STARTUP", "Application version: 1.1.2");
+        Logger.Log("STARTUP", "Application version: 1.1.3");
         Logger.Log("STARTUP", $"Executable path: {exePath}");
         Logger.Log("STARTUP", $"Runtime version: {Environment.Version}");
         Logger.Log("STARTUP", $"OS version: {Environment.OSVersion}");
         Logger.Log("STARTUP", $"Process architecture: {RuntimeInformation.ProcessArchitecture}");
+        Logger.Log("STARTUP", $"Local timezone: {TimeZoneInfo.Local.Id} (UTC Offset: {TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow)})");
 
         // 2. Global Unhandled Exception Handling
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
@@ -101,6 +117,10 @@ internal static class Program
             ApplicationConfiguration.Initialize();
             var context = new TrayApplicationContext(isSmokeTest, isSmokeTestUi, mockBattery);
 
+            // Transition lifecycle phase to Running
+            _currentPhase = AppLifecyclePhase.Running;
+            Logger.Log("LIFECYCLE", "App phase transitioned to Running");
+
             // Background IPC listener thread
             _ = Task.Run(() =>
             {
@@ -130,6 +150,7 @@ internal static class Program
         }
         finally
         {
+            _currentPhase = AppLifecyclePhase.ShuttingDown;
             _activateEventHandle?.Dispose();
             _singleInstanceMutex?.ReleaseMutex();
         }
@@ -141,9 +162,22 @@ internal static class Program
 
         Logger.LogException($"CRITICAL_{source}", ex);
 
-        string message = $"Произошла критическая ошибка запуска ({source}):\n\n{ex.Message}\n\nПодробная информация записана в лог-файл:\n{Logger.LogFilePath}";
-        MessageBox.Show(message, "AJAZZ Battery Monitor — Ошибка запуска", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        string fingerprint = $"{ex.GetType().FullName}:{ex.Message}:{ex.StackTrace?.Split('\n').FirstOrDefault() ?? ""}";
 
-        Environment.Exit(1);
+        if (_currentPhase == AppLifecyclePhase.Starting)
+        {
+            string message = $"Произошла ошибка запуска ({source}):\n\n{ex.Message}\n\nПодробная информация записана в лог-файл:\n{Logger.LogFilePath}";
+            MessageBox.Show(message, "AJAZZ Battery Monitor — Ошибка запуска", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Environment.Exit(1);
+        }
+        else
+        {
+            // Application is Running: Deduplicate UI error popups (max 1 popup per fingerprint per session)
+            if (ShownErrorFingerprints.TryAdd(fingerprint, true))
+            {
+                string message = $"В компоненте интерфейса произошла ошибка ({source}):\n\n{ex.Message}\n\nПриложение продолжит работу. Лог записан в:\n{Logger.LogFilePath}";
+                MessageBox.Show(message, "AJAZZ Battery Monitor — Ошибка интерфейса", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
     }
 }

@@ -4,6 +4,7 @@ using AjazzBattery.App.UI.Controls;
 using AjazzBattery.App.UI.Theme;
 using AjazzBattery.Core;
 using AjazzBattery.Core.Notifications;
+using AjazzBattery.Core.Time;
 using AjazzBattery.Storage;
 
 namespace AjazzBattery.App;
@@ -79,7 +80,7 @@ public sealed class MainForm : ThemeAwareForm
         _autoStartManager = autoStartManager ?? throw new ArgumentNullException(nameof(autoStartManager));
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
 
-        Text = "AJAZZ AJ179 APEX — Монитор батареи (v1.1.2)";
+        Text = "AJAZZ AJ179 APEX — Монитор батареи (v1.1.3)";
         Size = new Size(780, 520);
         MinimumSize = new Size(680, 480);
         StartPosition = FormStartPosition.CenterScreen;
@@ -421,7 +422,7 @@ public sealed class MainForm : ThemeAwareForm
             _lblBadgeTransport.Visible = true;
 
             _lblFooterDot.ForeColor = ThemeManager.GetBatteryLevelColor(status.Percent, status.IsCharging == true, status.IsSleeping);
-            _lblFooterStatus.Text = $"{trStr} · Обновлено только что";
+            _lblFooterStatus.Text = $"{trStr} · Обновлено {SystemClock.Instance.FormatRelativeTime(status.Timestamp)}";
         }
         else
         {

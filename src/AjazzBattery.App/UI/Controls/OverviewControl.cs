@@ -1,6 +1,7 @@
 using System.Windows.Forms;
 using AjazzBattery.App.UI.Theme;
 using AjazzBattery.Core;
+using AjazzBattery.Core.Time;
 
 namespace AjazzBattery.App.UI.Controls;
 
@@ -188,8 +189,9 @@ public sealed class OverviewControl : UserControl
         _cardStatus.CardSubText = isPresent ? "Опрос без ошибок" : "Ожидание устройства";
         _cardStatus.ValueColor = ThemeManager.GetBatteryLevelColor(status.Percent, status.IsCharging == true, status.IsSleeping);
 
-        _cardUpdated.CardValue = status.Timestamp.ToString("HH:mm:ss");
-        _cardUpdated.CardSubText = (DateTimeOffset.UtcNow - status.Timestamp).TotalSeconds < 10 ? "Только что" : $"{Math.Round((DateTimeOffset.UtcNow - status.Timestamp).TotalMinutes)} мин назад";
+        var localTime = SystemClock.Instance.ToLocal(status.Timestamp);
+        _cardUpdated.CardValue = isPresent ? localTime.ToString("HH:mm:ss") : "—";
+        _cardUpdated.CardSubText = isPresent ? SystemClock.Instance.FormatRelativeTime(status.Timestamp) : "Ожидание";
 
         _cardBatteryLife.CardValue = isPresent ? (status.Percent > 50 ? "≈ 3 дня" : "≈ 1 день") : "Недоступно";
         _cardBatteryLife.CardSubText = "Оценочное значение";

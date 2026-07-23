@@ -1,6 +1,7 @@
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using AjazzBattery.App.UI.Theme;
+using AjazzBattery.Core;
 
 namespace AjazzBattery.App.UI.Controls;
 
@@ -49,11 +50,37 @@ public sealed class ModernButton : Button
         Invalidate();
     }
 
+    public override Size GetPreferredSize(Size proposedSize)
+    {
+        var font = Font ?? SystemFonts.MessageBoxFont;
+        var textSize = TextRenderer.MeasureText(
+            Text ?? string.Empty,
+            font,
+            proposedSize,
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+
+        return new Size(
+            textSize.Width + 24,
+            Math.Max(textSize.Height + 12, 36));
+    }
+
     protected override void OnPaint(PaintEventArgs pevent)
+    {
+        try
+        {
+            PaintModernButton(pevent);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogException($"ModernButton_PaintFailed_{Name}", ex);
+            PaintFallbackButton(pevent);
+        }
+    }
+
+    private void PaintModernButton(PaintEventArgs pevent)
     {
         var g = pevent.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
         var pal = ThemeManager.Palette;
         g.Clear(Parent?.BackColor ?? pal.Surface);
@@ -78,10 +105,40 @@ public sealed class ModernButton : Button
             }
         }
 
-        using var fontBtn = Font;
-        using var brushText = new SolidBrush(btnText);
-        var sz = g.MeasureString(Text, fontBtn);
-        g.DrawString(Text, fontBtn, brushText, (Width - sz.Width) / 2, (Height - sz.Height) / 2);
+        var font = Font ?? SystemFonts.MessageBoxFont;
+        var textBounds = new Rectangle(4, 2, Width - 8, Height - 4);
+
+        if (!string.IsNullOrEmpty(Text))
+        {
+            TextRenderer.DrawText(
+                g,
+                Text,
+                font,
+                textBounds,
+                btnText,
+                TextFormatFlags.HorizontalCenter |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.SingleLine |
+                TextFormatFlags.NoPrefix);
+        }
+    }
+
+    private void PaintFallbackButton(PaintEventArgs e)
+    {
+        e.Graphics.Clear(SystemColors.Control);
+        ControlPaint.DrawButton(e.Graphics, ClientRectangle, _isPressed ? ButtonState.Pushed : ButtonState.Normal);
+
+        var font = SystemFonts.MessageBoxFont;
+        TextRenderer.DrawText(
+            e.Graphics,
+            Text ?? string.Empty,
+            font,
+            ClientRectangle,
+            SystemColors.ControlText,
+            TextFormatFlags.HorizontalCenter |
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.SingleLine |
+            TextFormatFlags.NoPrefix);
     }
 
     private static GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Windows.Forms;
 using AjazzBattery.Core;
+using AjazzBattery.Core.Time;
 using AjazzBattery.Hid;
 using AjazzBattery.Bluetooth;
 using AjazzBattery.Devices;
@@ -77,12 +78,20 @@ public sealed class DiagnosticsForm : Form
         var status = _engine.CurrentStatus;
 
         sb.AppendLine("=========================================================");
-        sb.AppendLine("  AJAZZ AJ179 APEX Battery Monitor — Диагностика v1.0.2  ");
+        sb.AppendLine("  AJAZZ AJ179 APEX Battery Monitor — Диагностика v1.1.3  ");
         sb.AppendLine("=========================================================");
-        sb.AppendLine($"Время отчёта: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"ОС:           {Environment.OSVersion}");
         sb.AppendLine($"64-bit OS:    {Environment.Is64BitOperatingSystem}");
         sb.AppendLine($"Лог-файл:     {Logger.LogFilePath}");
+        sb.AppendLine();
+
+        sb.AppendLine("--- ДИАГНОСТИКА ВРЕМЕНИ И ЧАСОВОГО ПОЯСА ---");
+        sb.AppendLine($"Timestamp stored UTC:     {status.Timestamp:yyyy-MM-ddTHH:mm:ss.fffZ}");
+        sb.AppendLine($"Timestamp displayed local: {SystemClock.Instance.ToLocal(status.Timestamp):yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"Current UTC:              {SystemClock.Instance.UtcNow:yyyy-MM-dd HH:mm:ssZ}");
+        sb.AppendLine($"Current local:            {SystemClock.Instance.LocalNow:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"Local time zone:          {TimeZoneInfo.Local.Id}");
+        sb.AppendLine($"UTC offset:               {TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow)}");
         sb.AppendLine();
 
         sb.AppendLine("--- ТЕКУЩИЙ СТАТУС ТЕЛЕМЕТРИИ ---");
@@ -92,7 +101,7 @@ public sealed class DiagnosticsForm : Form
         sb.AppendLine($"Зарядка:            {(status.IsCharging == true ? "Да" : "Нет")}");
         sb.AppendLine($"Режим сна:          {(status.IsSleeping ? "Да" : "Нет")}");
         sb.AppendLine($"Достоверность:      {status.Confidence}");
-        sb.AppendLine($"Диагностика:        {status.DiagnosticMessage}");
+        sb.AppendLine($"Диагностика:        {Logger.RedactSensitiveData(status.DiagnosticMessage ?? string.Empty)}");
 
         if (status.RawFrameHex != null && status.RawFrameHex.Length > 0)
         {
