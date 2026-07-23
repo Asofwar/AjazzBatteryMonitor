@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 8.0.423
       - name: Validate tag and centralized version
         shell: pwsh
         run: |
