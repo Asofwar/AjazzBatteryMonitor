@@ -39,12 +39,15 @@ jobs:
           powershell -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1
           powershell -ExecutionPolicy Bypass -File .\scripts\generate-sbom.ps1
       - name: Sign release executables
-        if: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
         shell: pwsh
         env:
           WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_BASE64) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            Write-Host 'No signing certificate is configured; publishing unsigned executables.'
+            exit 0
+          }
           $certificatePath = Join-Path $env:RUNNER_TEMP 'ajazz-release-signing.pfx'
           try {
             [System.IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
