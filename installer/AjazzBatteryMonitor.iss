@@ -32,6 +32,8 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+CloseApplications=yes
+CloseApplicationsFilter=AjazzBatteryMonitor.exe
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
@@ -41,8 +43,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 ; Desktop shortcut — unchecked by default
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
-; Autostart with Windows — checked by default on first install, not reset on upgrade
-; Uses checkedonce so subsequent upgrades respect the user's previous choice
+; Autostart with Windows — checked by default on first install, not reset on upgrade.
+; checkedonce: shown checked on first install; upgrade preserves previous state.
 Name: "autostart"; Description: "Запускать AJAZZ Battery Monitor вместе с Windows"; GroupDescription: "Дополнительные параметры:"; Flags: checkedonce
 
 [Files]
@@ -54,12 +56,12 @@ Source: "..\installer\assets\AppIcon.ico"; DestDir: "{app}"; DestName: "AppIcon.
 [Icons]
 ; Start Menu shortcut — no --background: manual launch opens the main window
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\AppIcon.ico"
-; Desktop shortcut — conditional on task
+; Desktop shortcut — conditional on desktopicon task
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\AppIcon.ico"; Tasks: desktopicon
 
 [Registry]
-; Autostart entry: runs with --background so it starts silently in the tray.
-; Note: closing quote is BEFORE --background (path may contain spaces).
+; Autostart entry: runs with --background so Windows login starts silently in the tray.
+; The closing quote is BEFORE --background so Windows correctly handles paths with spaces.
 ; Expected value: "C:\Users\...\AjazzBatteryMonitor.exe" --background
 Root: HKCU; \
     Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
@@ -70,7 +72,7 @@ Root: HKCU; \
     Tasks: autostart
 
 [Run]
-; Post-install launch — no --background: opens the main window on Overview
+; Post-install launch — no --background: opens the main window on Overview tab
 Filename: "{app}\{#MyAppExeName}"; \
     Description: "Запустить {#AppName}"; \
     Flags: nowait postinstall skipifsilent
@@ -94,15 +96,4 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usUninstall) and Assigned(RemoveDataCheckBox) and RemoveDataCheckBox.Checked then
     DelTree(ExpandConstant('{localappdata}\AjazzBatteryMonitor'), True, True, True);
-end;
-
-{ Attempt graceful shutdown of a running instance before files are replaced }
-function InitializeSetup: Boolean;
-var
-  ResultCode: Integer;
-begin
-  Result := True;
-  { Send ShutdownForUpdate via named pipe — best effort, ignore errors }
-  { The installer will proceed regardless }
-  Exec(ExpandConstant('{tmp}\shutdown-helper.exe'), '', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;

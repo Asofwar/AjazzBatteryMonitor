@@ -11,7 +11,7 @@ $isccCandidates = @(
 $iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 if (-not $iscc) { throw 'Inno Setup 6 (ISCC.exe) was not found.' }
-if (-not (Test-Path (Join-Path $publishDir 'AjazzBattery.App.exe'))) {
+if (-not (Test-Path (Join-Path $publishDir 'AjazzBatteryMonitor.exe'))) {
     throw 'Published executable not found. Run scripts/publish.ps1 first.'
 }
 
