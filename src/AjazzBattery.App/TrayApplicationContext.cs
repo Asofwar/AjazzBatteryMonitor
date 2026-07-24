@@ -23,16 +23,21 @@ public sealed class TrayApplicationContext : ApplicationContext
     private readonly BatteryHistoryStorage _storage;
     private readonly WindowsAutoStartManager _autoStartManager;
     private readonly CancellationTokenSource _pollCts;
+    private readonly LaunchMode _launchMode;
     private MainForm? _mainForm;
     private Icon? _currentIcon;
     private System.Windows.Forms.Timer? _smokeTestTimer;
     private readonly bool _isSmokeTest;
     private readonly bool _isSmokeTestUi;
-    private readonly int _uiThreadId;
+    private bool _hasShownTrayHint = false;
 
-    public TrayApplicationContext(bool isSmokeTest = false, bool isSmokeTestUi = false, int? mockPercent = null)
+    public TrayApplicationContext(
+        LaunchMode launchMode = LaunchMode.Overview,
+        bool isSmokeTest = false,
+        bool isSmokeTestUi = false,
+        int? mockPercent = null)
     {
-        _uiThreadId = Environment.CurrentManagedThreadId;
+        _launchMode = launchMode;
         _isSmokeTest = isSmokeTest;
         _isSmokeTestUi = isSmokeTestUi;
 
@@ -43,13 +48,15 @@ public sealed class TrayApplicationContext : ApplicationContext
         _autoStartManager = new WindowsAutoStartManager();
         _pollCts = new CancellationTokenSource();
 
-        // 1. Create NotifyIcon & Context Menu IMMEDIATELY before starting hardware operations
+        // 1. Create NotifyIcon & Context Menu IMMEDIATELY before hardware operations
         _notifyIcon = new NotifyIcon
         {
             Text = "AJAZZ AJ179 APEX — Заряд неизвестен",
             Visible = true
         };
 
+        // Use the embedded app icon as the initial tray icon until battery status is available
+        // TrayIconRenderer will produce dynamic battery-level icons after first poll
         UpdateTrayIconInternal(BatteryStatus.CreateUnknown());
         Logger.Log("TRAY", "Tray icon created and made visible");
 
@@ -77,7 +84,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         );
 
         SetupContextMenu();
-        _notifyIcon.DoubleClick += (s, e) => ShowMainForm();
+        _notifyIcon.DoubleClick += (s, e) => ShowOverview();
 
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.SessionSwitch += OnSessionSwitch;
@@ -86,6 +93,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         _ = RunPollingLoopAsync(_pollCts.Token);
         Logger.Log("MAIN", "Application startup completed");
 
+        // 4. Handle launch mode
         if (_isSmokeTest)
         {
             Logger.Log("SMOKE", "Smoke test mode active - scheduling clean exit in 10s...");
@@ -98,10 +106,40 @@ public sealed class TrayApplicationContext : ApplicationContext
             };
             _smokeTestTimer.Start();
         }
-        else if (_isSmokeTestUi)
+        else if (_launchMode == LaunchMode.Overview || _isSmokeTestUi)
         {
-            Logger.Log("SMOKE_UI", "Smoke test UI mode active - opening MainForm...");
-            ShowMainForm();
+            Logger.Log("STARTUP", "Normal launch mode: opening MainForm on Overview tab");
+            ShowOverview();
+        }
+        else if (_launchMode == LaunchMode.Settings)
+        {
+            Logger.Log("STARTUP", "Settings launch mode: opening MainForm on Settings tab");
+            ShowSettings();
+        }
+        else
+        {
+            Logger.Log("STARTUP", "Background launch mode: running silently in system tray");
+        }
+    }
+
+    /// <summary>
+    /// Allows Program.cs to invoke actions on the UI thread via the NotifyIcon handle.
+    /// </summary>
+    public void BeginInvokeOnUiThread(Action action)
+    {
+        if (_notifyIcon.ContextMenuStrip?.IsHandleCreated == true)
+        {
+            _notifyIcon.ContextMenuStrip.BeginInvoke(action);
+        }
+        else if (_mainForm?.IsHandleCreated == true)
+        {
+            _mainForm.BeginInvoke(action);
+        }
+        else
+        {
+            // Best effort: post to the thread pool and let it happen
+            Logger.Log("IPC", "BeginInvokeOnUiThread: no handle available, posting to task");
+            _ = Task.Run(() => { try { action(); } catch { } });
         }
     }
 
@@ -109,17 +147,22 @@ public sealed class TrayApplicationContext : ApplicationContext
     {
         var contextMenu = new ContextMenuStrip();
 
-        var headerItem = new ToolStripMenuItem("AJAZZ AJ179 APEX") { Enabled = false };
+        var headerItem    = new ToolStripMenuItem("AJAZZ AJ179 APEX") { Enabled = false };
         var subHeaderItem = new ToolStripMenuItem("— · —") { Enabled = false };
 
-        var openItem = new ToolStripMenuItem("Открыть монитор", null, (s, e) => ShowMainForm());
-        var refreshItem = new ToolStripMenuItem("Обновить заряд", null, async (s, e) =>
+        var openItem    = new ToolStripMenuItem("Открыть монитор",  null, (s, e) => ShowOverview());
+        var refreshItem = new ToolStripMenuItem("Обновить заряд",   null, async (s, e) =>
         {
             var st = await _engine.PollOnceAsync(CancellationToken.None);
             OnStatusUpdated(st);
         });
 
-        var historyItem = new ToolStripMenuItem("История", null, (s, e) => ShowMainForm());
+        var settingsItem = new ToolStripMenuItem("Настройки",  null, (s, e) => ShowSettings());
+        var diagItem     = new ToolStripMenuItem("Диагностика", null, (s, e) =>
+        {
+            var diagForm = new DiagnosticsForm(_engine);
+            diagForm.ShowDialog();
+        });
 
         var autoStartItem = new ToolStripMenuItem("Автозапуск", null, (s, e) =>
         {
@@ -132,12 +175,6 @@ public sealed class TrayApplicationContext : ApplicationContext
         });
         autoStartItem.Checked = _autoStartManager.IsAutoStartEnabled();
 
-        var diagItem = new ToolStripMenuItem("Диагностика", null, (s, e) =>
-        {
-            var diagForm = new DiagnosticsForm(_engine);
-            diagForm.ShowDialog();
-        });
-
         var exitItem = new ToolStripMenuItem("Выход", null, (s, e) => ExitApplication());
 
         contextMenu.Items.Add(headerItem);
@@ -145,7 +182,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         contextMenu.Items.Add(new ToolStripSeparator());
         contextMenu.Items.Add(openItem);
         contextMenu.Items.Add(refreshItem);
-        contextMenu.Items.Add(historyItem);
+        contextMenu.Items.Add(settingsItem);
         contextMenu.Items.Add(new ToolStripSeparator());
         contextMenu.Items.Add(autoStartItem);
         contextMenu.Items.Add(new ToolStripSeparator());
@@ -155,45 +192,139 @@ public sealed class TrayApplicationContext : ApplicationContext
         _notifyIcon.ContextMenuStrip = contextMenu;
     }
 
-    public void ShowMainForm()
+    // ──────────────────────────────────────────────────────────────────────
+    // Public window activation methods called by IPC dispatcher
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Opens (or activates) the main window and navigates to the Overview tab.
+    /// Called on normal launch, repeated launch, tray double-click, and IPC ShowOverview.
+    /// </summary>
+    public void ShowOverview()
+    {
+        EnsureMainFormCreated();
+        _mainForm!.SelectSection(AppSection.Overview);
+        ShowMainWindowInternal();
+    }
+
+    /// <summary>
+    /// Opens (or activates) the main window and navigates to the Settings tab.
+    /// Called on --settings launch and IPC ShowSettings.
+    /// </summary>
+    public void ShowSettings()
+    {
+        EnsureMainFormCreated();
+        _mainForm!.SelectSection(AppSection.Settings);
+        ShowMainWindowInternal();
+    }
+
+    /// <summary>Legacy public accessor used by smoke tests.</summary>
+    public void ShowMainForm() => ShowOverview();
+
+    /// <summary>
+    /// Graceful shutdown requested by the installer's ShutdownForUpdate IPC command.
+    /// </summary>
+    public void ShutdownForUpdate()
+    {
+        Logger.Log("IPC", "ShutdownForUpdate received — performing graceful shutdown");
+        ExitApplication();
+    }
+
+    private void EnsureMainFormCreated()
     {
         if (_mainForm == null || _mainForm.IsDisposed)
         {
             _mainForm = new MainForm(_engine, _notificationService, _autoStartManager, _storage);
+            _mainForm.FormClosing += OnMainFormClosing;
         }
-        _mainForm.Show();
+    }
+
+    private void ShowMainWindowInternal()
+    {
+        if (_mainForm == null) return;
+
+        if (_mainForm.WindowState == FormWindowState.Minimized)
+        {
+            _mainForm.WindowState = FormWindowState.Normal;
+        }
+
+        if (!_mainForm.Visible)
+        {
+            _mainForm.Show();
+        }
+
         _mainForm.BringToFront();
         _mainForm.Activate();
+
+        // Win32 SetForegroundWindow for cases where BringToFront isn't enough
+        if (_mainForm.IsHandleCreated)
+        {
+            NativeMethods.SetForegroundWindow(_mainForm.Handle);
+        }
+    }
+
+    private void OnMainFormClosing(object? sender, FormClosingEventArgs e)
+    {
+        if (e.CloseReason == CloseReason.UserClosing)
+        {
+            // Hide to tray instead of closing
+            e.Cancel = true;
+            _mainForm!.Hide();
+
+            // Show one-time tray hint
+            if (!_hasShownTrayHint)
+            {
+                _hasShownTrayHint = true;
+                _notifyIcon.ShowBalloonTip(
+                    3000,
+                    "AJAZZ Battery Monitor",
+                    "Приложение продолжает работать в системном трее.",
+                    ToolTipIcon.Info);
+            }
+        }
     }
 
     private void OnStatusUpdated(BatteryStatus status)
     {
-        if (Environment.CurrentManagedThreadId != _uiThreadId)
+        if (_notifyIcon.ContextMenuStrip?.IsHandleCreated == true)
         {
-            var menu = _notifyIcon.ContextMenuStrip;
-            if (menu?.IsHandleCreated == true)
+            if (!_notifyIcon.ContextMenuStrip.InvokeRequired)
             {
-                menu.BeginInvoke(() => OnStatusUpdated(status));
+                UpdateStatusOnUiThread(status);
             }
             else
             {
-                Logger.Log("STATUS_UPDATE", "Deferred tray update because the UI handle is not ready.");
+                _notifyIcon.ContextMenuStrip.BeginInvoke(() => UpdateStatusOnUiThread(status));
             }
-            return;
         }
+        else
+        {
+            // Handle not yet created — store for later
+            Logger.Log("STATUS_UPDATE", "UI handle not ready; status update deferred.");
+        }
+    }
 
+    private void UpdateStatusOnUiThread(BatteryStatus status)
+    {
         try
         {
             UpdateTrayIconInternal(status);
 
-            string pctStr = status.Percent.HasValue ? $"{status.Percent}%" : "заряд неизвестен";
-            string stateStr = status.IsChargingConfirmed ? "заряжается ⚡" : (status.IsSleeping ? "в режиме сна" : (status.IsPresent ? "подключена" : "отключена"));
+            string pctStr   = status.Percent.HasValue ? $"{status.Percent}%" : "заряд неизвестен";
+            string stateStr = status.IsChargingConfirmed
+                ? "заряжается ⚡"
+                : (status.IsSleeping ? "в режиме сна" : (status.IsPresent ? "подключена" : "отключена"));
             var localTime = SystemClock.Instance.ToLocal(status.Timestamp);
-            _notifyIcon.Text = $"AJAZZ AJ179 APEX\nЗаряд: {pctStr}\nСостояние: {stateStr}\nОбновлено: {localTime:HH:mm:ss}";
 
-            string connStr = status.ActiveTransport.Contains("BLE", StringComparison.OrdinalIgnoreCase) ? "Bluetooth LE" : (status.ActiveTransport.Contains("HID", StringComparison.OrdinalIgnoreCase) ? "2.4 GHz" : "—");
+            // NotifyIcon.Text is limited to 128 chars on Windows
+            string tooltip = $"AJAZZ AJ179 APEX\nЗаряд: {pctStr}\nСостояние: {stateStr}\nОбновлено: {localTime:HH:mm:ss}";
+            _notifyIcon.Text = tooltip.Length > 127 ? tooltip[..127] : tooltip;
 
-            if (_notifyIcon.ContextMenuStrip != null && _notifyIcon.ContextMenuStrip.Items.Count > 1)
+            string connStr = status.ActiveTransport.Contains("BLE", StringComparison.OrdinalIgnoreCase)
+                ? "Bluetooth LE"
+                : (status.ActiveTransport.Contains("HID", StringComparison.OrdinalIgnoreCase) ? "2.4 GHz" : "—");
+
+            if (_notifyIcon.ContextMenuStrip?.Items.Count > 1)
             {
                 _notifyIcon.ContextMenuStrip.Items[1].Text = $"{pctStr} · {connStr}";
             }
@@ -211,7 +342,19 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void UpdateTrayIconInternal(BatteryStatus status)
     {
-        Icon newIcon = TrayIconRenderer.CreateTrayIcon(status);
+        Icon? newIcon = null;
+        try
+        {
+            newIcon = TrayIconRenderer.CreateTrayIcon(status);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log("TRAY_ICON", $"TrayIconRenderer failed: {ex.Message} — using app icon fallback");
+            try { newIcon = new Icon(AppResources.ApplicationIcon, 16, 16); } catch { }
+        }
+
+        if (newIcon == null) return;
+
         Icon? oldIcon = _currentIcon;
         _currentIcon = newIcon;
         _notifyIcon.Icon = newIcon;
@@ -261,12 +404,19 @@ public sealed class TrayApplicationContext : ApplicationContext
     {
         Logger.Log("SHUTDOWN", "Application shutting down...");
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
-        SystemEvents.SessionSwitch -= OnSessionSwitch;
+        SystemEvents.SessionSwitch    -= OnSessionSwitch;
 
         _pollCts.Cancel();
         _smokeTestTimer?.Stop();
         _smokeTestTimer?.Dispose();
         _smokeTestTimer = null;
+        if (_mainForm != null)
+        {
+            _mainForm.FormClosing -= OnMainFormClosing;
+            _mainForm.Dispose();
+            _mainForm = null;
+        }
+
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
         _currentIcon?.Dispose();
@@ -288,4 +438,12 @@ public sealed class TrayApplicationContext : ApplicationContext
         public void NotifyLongDisconnection(string model) { }
         public void NotifyDeviceConflict(string message) { }
     }
+}
+
+/// <summary>P/Invoke declarations for Win32 foreground window activation.</summary>
+internal static class NativeMethods
+{
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    internal static extern bool SetForegroundWindow(IntPtr hWnd);
 }

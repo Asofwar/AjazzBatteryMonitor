@@ -133,4 +133,15 @@ public class UiLayoutTests
         Assert.Contains("≈ 3 дня", treeStr);
         Assert.DoesNotContain("Примерно 3 дн...", treeStr);
     }
+
+    [Fact]
+    public void TestInitialTab_IsOverview_AfterHandleCreationAndApplyTheme()
+    {
+        var (form, _) = CreateForm();
+        form.Show();
+
+        Assert.True(form.OverviewControlRef.Visible, "OverviewControl should be visible initially, not Settings");
+    }
+
 }
+

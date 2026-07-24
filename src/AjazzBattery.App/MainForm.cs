@@ -15,6 +15,7 @@ public sealed class MainForm : ThemeAwareForm
     private readonly BatteryNotificationService _notificationService;
     private readonly IAutoStartManager _autoStartManager;
     private readonly BatteryHistoryStorage _storage;
+    private int _currentTabIndex = 0;
 
     // 4-Row Root Hierarchy
     private readonly TableLayoutPanel _tblRoot;
@@ -86,6 +87,8 @@ public sealed class MainForm : ThemeAwareForm
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
+        ShowInTaskbar = true;
+        Icon = AppResources.ApplicationIcon;
 
         // =============================================================
         // RootLayout — TableLayoutPanel (1 Column, 4 Rows)
@@ -386,17 +389,13 @@ public sealed class MainForm : ThemeAwareForm
 
         Controls.Add(_tblRoot);
 
-        FormClosing += (s, e) =>
-        {
-            if (e.CloseReason == CloseReason.UserClosing)
-            {
-                e.Cancel = true;
-                Hide();
-            }
-        };
+        // Note: FormClosing (hide to tray) is handled by TrayApplicationContext.OnMainFormClosing
+        // to avoid coupling MainForm to tray lifecycle logic.
 
         UpdateUi(_engine.CurrentStatus);
         ValidateNavigationInvariants();
+        // Default to Overview section on creation
+        SwitchTab(0);
     }
 
     public void ValidateNavigationInvariants()
@@ -510,6 +509,7 @@ public sealed class MainForm : ThemeAwareForm
 
     private void SwitchTab(int tabIndex)
     {
+        _currentTabIndex = tabIndex;
         _overviewControl.Visible = tabIndex == 0;
         _tblHistory.Visible = tabIndex == 1;
         _pnlSettings.Visible = tabIndex == 2;
@@ -518,6 +518,21 @@ public sealed class MainForm : ThemeAwareForm
         _btnTabOverview.ForeColor = tabIndex == 0 ? pal.Accent : pal.SecondaryText;
         _btnTabHistory.ForeColor = tabIndex == 1 ? pal.Accent : pal.SecondaryText;
         _btnTabSettings.ForeColor = tabIndex == 2 ? pal.Accent : pal.SecondaryText;
+    }
+
+    /// <summary>
+    /// Navigates to the specified application section.
+    /// Called by TrayApplicationContext when activating via IPC or tray menu.
+    /// </summary>
+    public void SelectSection(AppSection section)
+    {
+        int tabIndex = section switch
+        {
+            AppSection.History  => 1,
+            AppSection.Settings => 2,
+            _                   => 0  // Overview is the default
+        };
+        SwitchTab(tabIndex);
     }
 
     private void SetHistoryRange(TimeSpan range)
@@ -559,7 +574,7 @@ public sealed class MainForm : ThemeAwareForm
         _btnTabHistory.BackColor = pal.Background;
         _btnTabSettings.BackColor = pal.Background;
 
-        SwitchTab(_overviewControl.Visible ? 0 : (_tblHistory.Visible ? 1 : 2));
+        SwitchTab(_currentTabIndex);
 
         _btnRange24h.BackColor = pal.SurfaceElevated; _btnRange24h.ForeColor = pal.PrimaryText;
         _btnRange7d.BackColor = pal.SurfaceElevated; _btnRange7d.ForeColor = pal.PrimaryText;

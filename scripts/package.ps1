@@ -2,8 +2,8 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Resolve-Path "$PSScriptRoot\.."
 $ArtifactsDir = "$RepoRoot\artifacts"
-$ExePath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.2.1.exe"
-$ZipPath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.2.1-portable.zip"
+$ExePath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.3.0.exe"
+$ZipPath = "$ArtifactsDir\AjazzBatteryMonitor-win-x64-v1.3.0-portable.zip"
 $PackageDir = "$ArtifactsDir\portable-package"
 
 if (-not (Test-Path $ExePath)) {
