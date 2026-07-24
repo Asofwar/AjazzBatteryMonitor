@@ -15,6 +15,7 @@ public sealed class MainForm : ThemeAwareForm
     private readonly BatteryNotificationService _notificationService;
     private readonly IAutoStartManager _autoStartManager;
     private readonly BatteryHistoryStorage _storage;
+    private int _currentTabIndex = 0;
 
     // 4-Row Root Hierarchy
     private readonly TableLayoutPanel _tblRoot;
@@ -508,6 +509,7 @@ public sealed class MainForm : ThemeAwareForm
 
     private void SwitchTab(int tabIndex)
     {
+        _currentTabIndex = tabIndex;
         _overviewControl.Visible = tabIndex == 0;
         _tblHistory.Visible = tabIndex == 1;
         _pnlSettings.Visible = tabIndex == 2;
@@ -572,7 +574,7 @@ public sealed class MainForm : ThemeAwareForm
         _btnTabHistory.BackColor = pal.Background;
         _btnTabSettings.BackColor = pal.Background;
 
-        SwitchTab(_overviewControl.Visible ? 0 : (_tblHistory.Visible ? 1 : 2));
+        SwitchTab(_currentTabIndex);
 
         _btnRange24h.BackColor = pal.SurfaceElevated; _btnRange24h.ForeColor = pal.PrimaryText;
         _btnRange7d.BackColor = pal.SurfaceElevated; _btnRange7d.ForeColor = pal.PrimaryText;
